@@ -19,6 +19,7 @@ import { DedupModule } from './modules/dedup/dedup.module';
 import { CollectorModule } from './modules/collector/collector.module';
 import { ChannelsModule } from './modules/channels/channels.module';
 import { AnalyzerModule } from './modules/analyzer/analyzer.module';
+import { PublisherModule } from './modules/publisher/publisher.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { AnalyzerModule } from './modules/analyzer/analyzer.module';
     CollectorModule,
     ChannelsModule,
     AnalyzerModule,
+    PublisherModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
