@@ -3,6 +3,7 @@ import { InjectQueue, OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullm
 import { Job, Queue } from 'bullmq';
 import { Currency, EmploymentType, Origin, Prisma, VacancyStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CacheService } from '../../redis/cache.service';
 import { NormalizeService } from './normalize.service';
 import { MatcherService } from './matcher.service';
 import {
@@ -28,6 +29,7 @@ export class DedupProcessor extends WorkerHost {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
     private readonly normalize: NormalizeService,
     private readonly matcher: MatcherService,
     @InjectQueue(PUBLISH_QUEUE) private readonly publishQueue: Queue<PublishJobData>,
@@ -106,6 +108,11 @@ export class DedupProcessor extends WorkerHost {
         },
       });
     }
+
+    // yangi vakansiya -> ro'yxat va statistika cache'i eskirdi
+    await this.cache.delPattern(`vacancies:list:${regionId}:*`);
+    await this.cache.delPattern('vacancies:list:all:*');
+    await this.cache.del('stats:overview');
 
     await this.publishQueue.add('publish', { vacancyId: vacancy.id, action: 'create' });
   }

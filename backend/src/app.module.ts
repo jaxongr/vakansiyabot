@@ -20,6 +20,12 @@ import { CollectorModule } from './modules/collector/collector.module';
 import { ChannelsModule } from './modules/channels/channels.module';
 import { AnalyzerModule } from './modules/analyzer/analyzer.module';
 import { PublisherModule } from './modules/publisher/publisher.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { VacanciesModule } from './modules/vacancies/vacancies.module';
+import { RefsModule } from './modules/refs/refs.module';
+import { UsersModule } from './modules/users/users.module';
+import { StatsModule } from './modules/stats/stats.module';
+import { ScraperModule } from './modules/scraper/scraper.module';
 
 @Module({
   imports: [
@@ -53,6 +59,12 @@ import { PublisherModule } from './modules/publisher/publisher.module';
     ChannelsModule,
     AnalyzerModule,
     PublisherModule,
+    AuthModule,
+    VacanciesModule,
+    RefsModule,
+    UsersModule,
+    StatsModule,
+    ScraperModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },

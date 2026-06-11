@@ -5,6 +5,7 @@ import { DedupProcessor } from './dedup.processor';
 import { NormalizeService } from './normalize.service';
 import { MatcherService } from './matcher.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CacheService } from '../../redis/cache.service';
 import {
   DEAD_LETTER_QUEUE,
   DedupJobData,
@@ -48,6 +49,10 @@ describe('DedupProcessor', () => {
         NormalizeService,
         MatcherService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: CacheService,
+          useValue: { del: jest.fn(), delPattern: jest.fn(), get: jest.fn(), set: jest.fn() },
+        },
         { provide: getQueueToken(PUBLISH_QUEUE), useValue: publishQueue },
         { provide: getQueueToken(DEAD_LETTER_QUEUE), useValue: dlq },
       ],

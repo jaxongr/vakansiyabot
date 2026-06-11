@@ -56,10 +56,25 @@ enum PostKind {
   OTHER
 }
 
-/// Yozuv qayerdan kelgan: kanaldan yig'ilgan yoki bot orqali topshirilgan
+/// Yozuv qayerdan kelgan: kanaldan, bot orqali yoki tashqi vakansiya saytidan
 enum Origin {
   CHANNEL
   BOT
+  WEB
+}
+
+/// Tashqi sayt adapteri turi
+enum WebSourceType {
+  ISHUZ
+  OLX
+  HHUZ
+  GENERIC_RSS
+}
+
+enum WebSourceStatus {
+  ACTIVE
+  PAUSED
+  ERROR
 }
 
 // ===================== MODELS =====================
@@ -83,24 +98,51 @@ model Channel {
 }
 
 model RawPost {
-  id          String   @id @default(uuid())
-  channelId   String
-  tgMessageId BigInt
+  id          String    @id @default(uuid())
+  origin      Origin    @default(CHANNEL)
+  channelId   String? // CHANNEL origin uchun
+  webSourceId String? // WEB origin uchun
+  externalId  String? // saytdagi e'lon id/url (WEB takrorlanmasligi uchun)
+  externalUrl String?
+  tgMessageId BigInt? // CHANNEL origin uchun
   text        String
   textHash    String // normalized SHA-256
   postedAt    DateTime
   processed   Boolean   @default(false)
   kind        PostKind? // analyzer natijasi: VACANCY | RESUME | OTHER
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  channel Channel         @relation(fields: [channelId], references: [id])
-  sources VacancySource[]
+  channel   Channel?        @relation(fields: [channelId], references: [id])
+  webSource WebSource?      @relation(fields: [webSourceId], references: [id])
+  sources   VacancySource[]
 
   @@unique([channelId, tgMessageId])
+  @@unique([webSourceId, externalId])
   @@index([processed])
   @@index([textHash])
   @@map("raw_posts")
+}
+
+/// Tashqi vakansiya sayti manbasi (ish.uz, OLX, hh.uz, RSS...)
+model WebSource {
+  id            String          @id @default(uuid())
+  type          WebSourceType
+  name          String
+  url           String // listing/RSS URL
+  status        WebSourceStatus @default(ACTIVE)
+  intervalMin   Int             @default(30) // skanerlash oralig'i (daqiqa)
+  lastScrapedAt DateTime?
+  lastError     String?
+  postsCount    Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  deletedAt     DateTime?
+
+  rawPosts RawPost[]
+
+  @@index([status])
+  @@map("web_sources")
 }
 
 model Vacancy {
@@ -121,6 +163,8 @@ model Vacancy {
   origin         Origin         @default(CHANNEL)
   submittedById  String? // bot orqali topshirgan AppUser
   simhash        String? // 64-bit simhash hex — dedup uchun
+  /// Raw SQL migratsiyada boshqariladi (GENERATED tsvector) — full-text qidiruv uchun
+  searchVector   Unsupported("tsvector")? @map("search_vector")
   firstSeenAt    DateTime
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt

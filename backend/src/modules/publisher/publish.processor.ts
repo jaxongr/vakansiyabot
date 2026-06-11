@@ -85,7 +85,11 @@ export class PublishProcessor extends WorkerHost {
       employmentType: vacancy.employmentType,
       phones: vacancy.phones,
       tgContact: vacancy.tgContact,
-      sourceChannels: [...new Set(vacancy.sources.map((s) => s.rawPost.channel.title))],
+      sourceChannels: [
+        ...new Set(
+          vacancy.sources.map((s) => s.rawPost.channel?.title ?? 'Tashqi sayt').filter(Boolean),
+        ),
+      ],
     });
 
     const message = await this.sendToTopic(vacancy.regionId, html, this.vacancyKeyboard(vacancy.id));
@@ -135,7 +139,9 @@ export class PublishProcessor extends WorkerHost {
       employmentType: v.employmentType,
       phones: v.phones,
       tgContact: v.tgContact,
-      sourceChannels: [...new Set(v.sources.map((s) => s.rawPost.channel.title))],
+      sourceChannels: [
+        ...new Set(v.sources.map((s) => s.rawPost.channel?.title ?? 'Tashqi sayt').filter(Boolean)),
+      ],
     });
 
     try {

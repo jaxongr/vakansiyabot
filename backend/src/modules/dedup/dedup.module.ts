@@ -3,6 +3,8 @@ import { BullModule } from '@nestjs/bullmq';
 import { NormalizeService } from './normalize.service';
 import { MatcherService } from './matcher.service';
 import { DedupProcessor } from './dedup.processor';
+import { DedupReviewController } from './dedup-review.controller';
+import { DedupReviewService } from './dedup-review.service';
 import {
   DEAD_LETTER_QUEUE,
   DEDUP_QUEUE,
@@ -18,7 +20,8 @@ import {
       { name: DEAD_LETTER_QUEUE },
     ),
   ],
-  providers: [NormalizeService, MatcherService, DedupProcessor],
+  controllers: [DedupReviewController],
+  providers: [NormalizeService, MatcherService, DedupProcessor, DedupReviewService],
   exports: [NormalizeService, MatcherService],
 })
 export class DedupModule {}

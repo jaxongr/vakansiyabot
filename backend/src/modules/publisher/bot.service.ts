@@ -43,9 +43,9 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit(): Promise<void> {
     const token = this.config.get<string>('BOT_TOKEN');
-    if (!token) {
+    if (!token || this.config.get('NODE_ENV') === 'test') {
       this.status.set('publisher', 'DISABLED', "BOT_TOKEN sozlanmagan — publisher o'chiq");
-      this.logger.warn('Publisher disabled: BOT_TOKEN missing');
+      this.logger.warn('Publisher disabled: BOT_TOKEN missing yoki test muhiti');
       return;
     }
 
