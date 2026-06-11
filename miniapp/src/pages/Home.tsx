@@ -1,0 +1,169 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import styled from 'styled-components';
+import { useCategories, useRegions, useVacancies, VacancyFilters } from '../api/hooks';
+import { VacancyCard } from '../components/VacancyCard';
+import { Button, Center, Screen, Spinner } from '../components/ui';
+import { css } from '../theme';
+
+const Top = styled.div`
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: ${css.bg};
+  padding: 12px 12px 8px;
+  border-bottom: 1px solid color-mix(in srgb, ${css.hint} 15%, transparent);
+`;
+const Search = styled.input`
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, ${css.hint} 25%, transparent);
+  background: ${css.secondaryBg};
+  color: ${css.text};
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  &::placeholder {
+    color: ${css.hint};
+  }
+`;
+const Filters = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+const Select = styled.select`
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, ${css.hint} 25%, transparent);
+  background: ${css.bg};
+  color: ${css.text};
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+`;
+const SavedLink = styled.button`
+  position: fixed;
+  bottom: 18px;
+  right: 16px;
+  z-index: 20;
+  border: none;
+  background: ${css.button};
+  color: ${css.buttonText};
+  border-radius: 28px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  box-shadow: 0 4px 14px rgba(107, 70, 193, 0.35);
+  cursor: pointer;
+`;
+
+export function Home() {
+  const navigate = useNavigate();
+  const { data: regions } = useRegions();
+  const { data: categories } = useCategories();
+
+  const [q, setQ] = useState('');
+  const [debouncedQ, setDebouncedQ] = useState('');
+  const [regionId, setRegionId] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [employmentType, setEmploymentType] = useState('');
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(q), 350);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const filters: VacancyFilters = useMemo(
+    () => ({
+      q: debouncedQ || undefined,
+      regionId: regionId || undefined,
+      categoryId: categoryId || undefined,
+      employmentType: employmentType || undefined,
+    }),
+    [debouncedQ, regionId, categoryId, employmentType],
+  );
+
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useVacancies(filters);
+
+  const sentinel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el) return;
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const items = data?.pages.flatMap((p) => p.data) ?? [];
+
+  return (
+    <Screen>
+      <Top>
+        <Search
+          placeholder="🔍 Kasb, lavozim qidirish..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <Filters>
+          <Select value={regionId} onChange={(e) => setRegionId(e.target.value)}>
+            <option value="">Barcha viloyatlar</option>
+            {regions?.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.nameUz}
+              </option>
+            ))}
+          </Select>
+          <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            <option value="">Barcha yo'nalishlar</option>
+            {categories?.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nameUz}
+              </option>
+            ))}
+          </Select>
+          <Select value={employmentType} onChange={(e) => setEmploymentType(e.target.value)}>
+            <option value="">Ish turi</option>
+            <option value="FULL_TIME">To'liq</option>
+            <option value="PART_TIME">Yarim stavka</option>
+            <option value="REMOTE">Masofaviy</option>
+            <option value="SHIFT">Smenali</option>
+          </Select>
+        </Filters>
+      </Top>
+
+      {isLoading && <Spinner />}
+      {isError && (
+        <Center>
+          <span>😕 Ma'lumotlarni yuklab bo'lmadi</span>
+          <Button $variant="ghost" onClick={() => window.location.reload()}>
+            Qayta yuklash
+          </Button>
+        </Center>
+      )}
+      {!isLoading && !isError && items.length === 0 && (
+        <Center>🔍 Hech narsa topilmadi. Filtrlarni o'zgartiring.</Center>
+      )}
+
+      {items.map((v) => (
+        <VacancyCard key={v.id} v={v} />
+      ))}
+      <div ref={sentinel} style={{ height: 1 }} />
+      {isFetchingNextPage && <Spinner />}
+
+      <SavedLink onClick={() => navigate('/saved')}>⭐ Saqlangan</SavedLink>
+    </Screen>
+  );
+}

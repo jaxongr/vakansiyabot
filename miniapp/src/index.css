@@ -1,0 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Outfit', -apple-system, system-ui, sans-serif;
+  background: var(--tg-bg, #ffffff);
+}
+
+#root {
+  max-width: 600px;
+  margin: 0 auto;
+}
