@@ -10,6 +10,7 @@ import { Response } from 'express';
 import { Prisma } from '@prisma/client';
 import { AppException } from '../errors/app.exception';
 import { ErrorCode } from '../errors/error-codes';
+import { captureException } from '../monitoring/sentry';
 
 interface ErrorBody {
   error: {
@@ -67,6 +68,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     } else {
       const err = exception as Error;
       this.logger.error(err.message ?? 'Unknown error', err.stack);
+      captureException(exception); // kutilmagan xatolar -> Sentry
     }
 
     response.status(status).json(body);

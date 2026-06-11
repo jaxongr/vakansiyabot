@@ -1,7 +1,21 @@
 # Vakansiya Agregator
 
-Telegramdagi vakansiya kanallarini real vaqtda kuzatish, tahlil qilish, dublikatlarni
-birlashtirish va forum-guruh mavzulariga (viloyatlar bo'yicha) avtomatik joylash tizimi.
+Telegram kanallari, **bot orqali topshirilgan e'lonlar** va **tashqi vakansiya
+saytlari** (RSS/HTML)dan e'lonlarni real vaqtda yig'ish, aqlli tahlil qilish
+(viloyat, kategoriya, maosh, telefon — VACANCY/RESUME/OTHER), dublikatlarni
+birlashtirish va forum-guruh mavzulariga (viloyatlar + rezyumelar) avtomatik
+joylash tizimi.
+
+## Imkoniyatlar
+
+- **Collector** (GramJS) — kanallarni real vaqtda kuzatish
+- **Bot intake** (grammY) — ish beruvchi e'lon, ish izlovchi mukammal rezyume topshiradi
+- **Web scraper** — ish.uz/OLX/hh.uz (HTML) va istalgan RSS/Atom feed
+- **Analyzer** — regex (telefon/maosh/viloyat/kategoriya) + LLM fallback (claude-haiku)
+- **Dedup** — hash + phone/title + simhash; shubhalilar admin review'ga
+- **Publisher** — har viloyat uchun forum topic, rezyumelar alohida topic
+- **Mini App** — vakansiya/rezyume ro'yxati, qidiruv, saqlash, deep-link
+- **Dashboard** — statistika, kanal/sayt boshqaruvi, moderatsiya, dedup review
 
 ## Tarkib
 
@@ -10,6 +24,7 @@ birlashtirish va forum-guruh mavzulariga (viloyatlar bo'yicha) avtomatik joylash
 | `backend/`   | NestJS + Prisma + PostgreSQL + Redis + BullMQ       |
 | `dashboard/` | Admin panel (Vite + React + AntD)                   |
 | `miniapp/`   | Telegram Mini App (Vite + React, yengil)            |
+| `deploy/`    | nginx config + VPS deploy yo'riqnomasi              |
 
 ## Talablar
 

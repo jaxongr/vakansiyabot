@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { useCategories, useRegions, useVacancies, VacancyFilters } from '../api/hooks';
+import { useCategories, useRegions, useResumes, useVacancies, VacancyFilters } from '../api/hooks';
 import { VacancyCard } from '../components/VacancyCard';
+import { ResumeCard } from '../components/ResumeCard';
 import { Button, Center, Screen, Spinner } from '../components/ui';
 import { css } from '../theme';
 
@@ -50,6 +51,23 @@ const Select = styled.select`
   font-family: inherit;
   outline: none;
 `;
+const Tabs = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+`;
+const Tab = styled.button<{ $active: boolean }>`
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  padding: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  background: ${(p) => (p.$active ? css.button : css.secondaryBg)};
+  color: ${(p) => (p.$active ? css.buttonText : css.text)};
+`;
 const SavedLink = styled.button`
   position: fixed;
   bottom: 18px;
@@ -72,6 +90,7 @@ export function Home() {
   const { data: regions } = useRegions();
   const { data: categories } = useCategories();
 
+  const [tab, setTab] = useState<'vacancies' | 'resumes'>('vacancies');
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [regionId, setRegionId] = useState('');
@@ -93,8 +112,10 @@ export function Home() {
     [debouncedQ, regionId, categoryId, employmentType],
   );
 
-  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useVacancies(filters);
+  const vacanciesQuery = useVacancies(filters);
+  const resumesQuery = useResumes(filters);
+  const active = tab === 'vacancies' ? vacanciesQuery : resumesQuery;
+  const { isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = active;
 
   const sentinel = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -107,11 +128,21 @@ export function Home() {
     return () => obs.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const items = data?.pages.flatMap((p) => p.data) ?? [];
+  const vacancyItems = vacanciesQuery.data?.pages.flatMap((p) => p.data) ?? [];
+  const resumeItems = resumesQuery.data?.pages.flatMap((p) => p.data) ?? [];
+  const count = tab === 'vacancies' ? vacancyItems.length : resumeItems.length;
 
   return (
     <Screen>
       <Top>
+        <Tabs>
+          <Tab $active={tab === 'vacancies'} onClick={() => setTab('vacancies')}>
+            💼 Vakansiyalar
+          </Tab>
+          <Tab $active={tab === 'resumes'} onClick={() => setTab('resumes')}>
+            👤 Rezyumelar
+          </Tab>
+        </Tabs>
         <Search
           placeholder="🔍 Kasb, lavozim qidirish..."
           value={q}
@@ -153,13 +184,13 @@ export function Home() {
           </Button>
         </Center>
       )}
-      {!isLoading && !isError && items.length === 0 && (
+      {!isLoading && !isError && count === 0 && (
         <Center>🔍 Hech narsa topilmadi. Filtrlarni o'zgartiring.</Center>
       )}
 
-      {items.map((v) => (
-        <VacancyCard key={v.id} v={v} />
-      ))}
+      {tab === 'vacancies'
+        ? vacancyItems.map((v) => <VacancyCard key={v.id} v={v} />)
+        : resumeItems.map((r) => <ResumeCard key={r.id} r={r} />)}
       <div ref={sentinel} style={{ height: 1 }} />
       {isFetchingNextPage && <Spinner />}
 

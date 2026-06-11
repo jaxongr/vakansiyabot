@@ -5,12 +5,14 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { initSentry } from './common/monitoring/sentry';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   const config = app.get(ConfigService);
+  initSentry(config.get<string>('SENTRY_DSN'), config.get('NODE_ENV', 'development'));
 
   app.setGlobalPrefix('api/v1');
   app.use(helmet());

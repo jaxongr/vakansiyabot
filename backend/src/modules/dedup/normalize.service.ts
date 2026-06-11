@@ -20,9 +20,12 @@ export class NormalizeService {
         // hashtag belgisi (so'z qoladi)
         .replace(/#/g, ' ')
         // emoji va piktogrammalar
-        .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{FE0F}\u{200D}]/gu, ' ')
+        .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}]/gu, ' ')
+        // variation selector (FE0F) va zero-width joiner (200D) — alohida
+        .replace(/\u{FE0F}/gu, '')
+        .replace(/\u{200D}/gu, '')
         // dekorativ belgilar
-        .replace(/[▪►▶✔✅☑️•◦‣⁃—–_*~`|]+/g, ' ')
+        .replace(/[▪►▶✔✅•◦‣⁃—–_*~`|]+/g, ' ')
         .replace(/\s+/g, ' ')
         .trim()
     );

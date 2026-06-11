@@ -46,6 +46,28 @@ export interface VacancyDetail extends VacancyListItem {
   sources: VacancySource[];
 }
 
+export interface ResumeListItem {
+  id: string;
+  fullName: string;
+  age: number | null;
+  title: string;
+  experienceYears: number | null;
+  skills: string[];
+  salaryExpectation: number | null;
+  currency: 'UZS' | 'USD';
+  createdAt: string;
+  region: { id: string; code: string; nameUz: string };
+  category: { id: string; code: string; nameUz: string };
+}
+
+export interface ResumeDetail extends ResumeListItem {
+  about: string;
+  education: string | null;
+  experience: string | null;
+  phones: string[];
+  tgContact: string | null;
+}
+
 export interface Page<T> {
   data: T[];
   meta: { nextCursor: string | null; limit: number };

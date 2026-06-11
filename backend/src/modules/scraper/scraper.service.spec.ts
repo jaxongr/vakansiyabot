@@ -11,7 +11,6 @@ import { ANALYZE_QUEUE } from '../../queues/queue.types';
 
 describe('ScraperService', () => {
   let service: ScraperService;
-  const rss = new RssAdapter();
 
   const prisma = {
     webSource: { findMany: jest.fn(), update: jest.fn() },

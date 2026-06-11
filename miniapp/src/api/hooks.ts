@@ -1,6 +1,15 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
-import { Category, Me, Page, Region, VacancyDetail, VacancyListItem } from './types';
+import {
+  Category,
+  Me,
+  Page,
+  Region,
+  ResumeDetail,
+  ResumeListItem,
+  VacancyDetail,
+  VacancyListItem,
+} from './types';
 
 export interface VacancyFilters {
   regionId?: string;
@@ -47,6 +56,31 @@ export function useVacancy(id: string) {
   return useQuery({
     queryKey: ['vacancy', id],
     queryFn: async () => (await api.get<{ data: VacancyDetail }>(`/vacancies/${id}`)).data.data,
+    enabled: Boolean(id),
+  });
+}
+
+export function useResumes(filters: VacancyFilters) {
+  return useInfiniteQuery({
+    queryKey: ['resumes', filters],
+    queryFn: async ({ pageParam }) => {
+      const params = new URLSearchParams();
+      if (pageParam) params.set('cursor', pageParam as string);
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v !== undefined && v !== '') params.set(k, String(v));
+      });
+      params.set('limit', '20');
+      return (await api.get<Page<ResumeListItem>>(`/resumes?${params}`)).data;
+    },
+    initialPageParam: '' as string,
+    getNextPageParam: (last) => last.meta.nextCursor ?? undefined,
+  });
+}
+
+export function useResume(id: string) {
+  return useQuery({
+    queryKey: ['resume', id],
+    queryFn: async () => (await api.get<{ data: ResumeDetail }>(`/resumes/${id}`)).data.data,
     enabled: Boolean(id),
   });
 }
