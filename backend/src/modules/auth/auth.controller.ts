@@ -51,4 +51,11 @@ export class AuthController {
   refresh(@Body() dto: RefreshDto) {
     return this.auth.refresh(dto.refreshToken);
   }
+
+  @Post('dev-login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Lokal demo: admin token (faqat development)' })
+  devLogin() {
+    return this.auth.devLogin();
+  }
 }

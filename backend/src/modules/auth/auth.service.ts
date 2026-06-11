@@ -117,6 +117,18 @@ export class AuthService {
     return { ...tokens, user: this.safeUser(user) };
   }
 
+  // ===================== Dev login (faqat development) =====================
+
+  /** Lokal demo uchun admin token — NODE_ENV=production da BLOKLANADI */
+  async devLogin(): Promise<TokenPair & { user: SafeUser }> {
+    if (this.config.get('NODE_ENV') === 'production') {
+      throw AppException.forbidden('Dev login production`da o`chirilgan');
+    }
+    const user = await this.upsertUser(999000999, 'devadmin', 'Dev Admin', Role.ADMIN);
+    const tokens = await this.issueTokens(user);
+    return { ...tokens, user: this.safeUser(user) };
+  }
+
   // ===================== Refresh rotation =====================
 
   async refresh(refreshToken: string): Promise<TokenPair> {

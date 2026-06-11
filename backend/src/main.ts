@@ -16,8 +16,14 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix('api/v1');
   app.use(helmet());
+  const isDev = config.get('NODE_ENV', 'development') !== 'production';
+  const whitelist = [config.get('MINIAPP_URL'), config.get('DASHBOARD_URL')].filter(Boolean);
   app.enableCors({
-    origin: [config.get('MINIAPP_URL'), config.get('DASHBOARD_URL')].filter(Boolean),
+    // dev: istalgan localhost porti (Vite port konflikti bo'lsa ham ishlasin)
+    origin: isDev
+      ? (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) =>
+          cb(null, !origin || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin))
+      : whitelist,
     credentials: true,
   });
   app.useGlobalPipes(

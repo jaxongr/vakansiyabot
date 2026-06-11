@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  server: { port: 5174, host: true },
+  server: { port: 5180, host: true, strictPort: true },
   build: {
     target: 'es2022',
     rollupOptions: {

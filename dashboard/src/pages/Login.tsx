@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, Card, Typography } from 'antd';
+import { Alert, Button, Card, Divider, Typography } from 'antd';
 import { api, setTokens } from '../api/client';
 
 const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME as string | undefined;
+const IS_LOCAL = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 /**
  * Telegram Login Widget. Global callback orqali backendga yuboramiz.
@@ -68,6 +69,28 @@ export function Login() {
             message="VITE_BOT_USERNAME sozlanmagan"
             description=".env ga bot username qo'shing, so'ng Telegram Login tugmasi paydo bo'ladi."
           />
+        )}
+        {IS_LOCAL && (
+          <>
+            <Divider plain style={{ color: '#999' }}>
+              lokal demo
+            </Divider>
+            <Button
+              block
+              size="large"
+              onClick={async () => {
+                try {
+                  const res = await api.post('/auth/dev-login');
+                  setTokens(res.data.data.accessToken, res.data.data.refreshToken);
+                  navigate('/');
+                } catch {
+                  setError('Dev login ishlamadi (backend ishlayaptimi?)');
+                }
+              }}
+            >
+              🔧 Dev kirish (faqat lokal)
+            </Button>
+          </>
         )}
       </Card>
     </div>
