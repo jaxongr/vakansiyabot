@@ -16,7 +16,7 @@ export const CATEGORIES: CategoryDef[] = [
     keywords: [
       'dasturchi', 'дастурчи', 'programmist', 'программист', 'developer', 'frontend',
       'backend', 'fullstack', 'flutter', 'react', 'python', 'java ', 'javascript',
-      'node.js', 'nodejs', '1c', '1с', 'devops', 'qa engineer', 'tester', 'тестировщик',
+      'node.js', 'nodejs', 'devops', 'qa engineer', 'tester', 'тестировщик',
       'mobilograf', 'веб-дастурчи', 'it mutaxassis', 'sistem administrator', 'sysadmin',
     ],
   },
@@ -100,6 +100,7 @@ export const CATEGORIES: CategoryDef[] = [
     keywords: [
       'buxgalter', 'бухгалтер', 'hisobchi', 'ҳисобчи', 'moliya', 'молия', 'финанс',
       'auditor', 'аудитор', 'iqtisodchi', 'иқтисодчи', 'экономист', 'kredit', 'bank ',
+      '1c', '1с',
     ],
   },
   {

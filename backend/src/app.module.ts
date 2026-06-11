@@ -3,6 +3,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { BullModule } from '@nestjs/bullmq';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { WinstonModule } from 'nest-winston';
 import { validateEnv } from './config/configuration';
@@ -17,6 +18,7 @@ import { SystemModule } from './modules/system/system.module';
 import { DedupModule } from './modules/dedup/dedup.module';
 import { CollectorModule } from './modules/collector/collector.module';
 import { ChannelsModule } from './modules/channels/channels.module';
+import { AnalyzerModule } from './modules/analyzer/analyzer.module';
 
 @Module({
   imports: [
@@ -40,6 +42,7 @@ import { ChannelsModule } from './modules/channels/channels.module';
         };
       },
     }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     PrismaModule,
     RedisModule,
@@ -47,6 +50,7 @@ import { ChannelsModule } from './modules/channels/channels.module';
     DedupModule,
     CollectorModule,
     ChannelsModule,
+    AnalyzerModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
