@@ -68,6 +68,51 @@ export class ChannelsService {
     return serializeChannel(channel);
   }
 
+  /**
+   * Ko'plab kanalni bittada qo'shish (username ro'yxati).
+   * Session yo'q bo'lsa demo-rejimda saqlanadi; ulanganda collector join qiladi.
+   * FloodWait xavfi sababli bulk'da darhol join QILINMAYDI.
+   */
+  async bulkImport(
+    usernames: string[],
+  ): Promise<{ added: number; skipped: number; total: number }> {
+    const clean = [
+      ...new Set(
+        usernames
+          .map((u) => u.trim().replace(/^@/, '').replace(/^https?:\/\/t\.me\//i, ''))
+          .filter((u) => /^[a-zA-Z][a-zA-Z0-9_]{3,31}$/.test(u)),
+      ),
+    ];
+
+    let added = 0;
+    let skipped = 0;
+    let offset = 0;
+    for (const username of clean) {
+      const existing = await this.prisma.channel.findFirst({
+        where: { username: { equals: username, mode: 'insensitive' }, deletedAt: null },
+      });
+      if (existing) {
+        skipped += 1;
+        continue;
+      }
+      offset += 1;
+      await this.prisma.channel.create({
+        data: {
+          tgId: BigInt(Date.now()) * -1n - BigInt(offset),
+          username,
+          title: `@${username}`,
+          type: ChannelType.CHANNEL,
+          status: ChannelStatus.ACTIVE,
+        },
+      });
+      added += 1;
+    }
+
+    await this.collector.refreshActiveChannels();
+    this.logger.log(`Bulk import: ${added} qo'shildi, ${skipped} mavjud edi`);
+    return { added, skipped, total: clean.length };
+  }
+
   async list(cursor?: string, limit = 20): Promise<CursorPage<ReturnType<typeof serializeChannel>>> {
     const rows = await this.prisma.channel.findMany({
       where: { deletedAt: null },

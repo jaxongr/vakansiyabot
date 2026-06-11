@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { IntakeService } from './intake.service';
 import { IntakeStateService } from './intake-state.service';
+import { BrowseService } from './browse.service';
 import { AnalyzerModule } from '../analyzer/analyzer.module';
 import { DEFAULT_JOB_OPTIONS, PUBLISH_QUEUE } from '../../queues/queue.types';
 
@@ -10,7 +11,7 @@ import { DEFAULT_JOB_OPTIONS, PUBLISH_QUEUE } from '../../queues/queue.types';
     BullModule.registerQueue({ name: PUBLISH_QUEUE, defaultJobOptions: DEFAULT_JOB_OPTIONS }),
     AnalyzerModule,
   ],
-  providers: [IntakeService, IntakeStateService],
-  exports: [IntakeService],
+  providers: [IntakeService, IntakeStateService, BrowseService],
+  exports: [IntakeService, BrowseService],
 })
 export class IntakeModule {}

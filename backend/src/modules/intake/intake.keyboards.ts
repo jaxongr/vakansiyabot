@@ -3,10 +3,15 @@ import { Category, Region } from '@prisma/client';
 
 export const MENU_VACANCY = "➕ E'lon berish — xodim kerak";
 export const MENU_RESUME = '📄 Rezyume yuborish — ish izlayapman';
+export const MENU_SEARCH_JOB = '🔍 Ish qidirish';
+export const MENU_SEARCH_RESUME = '👤 Rezyume qidirish';
 export const MENU_HELP = 'ℹ️ Yordam';
 
 export function mainMenu(): Keyboard {
   return new Keyboard()
+    .text(MENU_SEARCH_JOB)
+    .text(MENU_SEARCH_RESUME)
+    .row()
     .text(MENU_VACANCY)
     .row()
     .text(MENU_RESUME)

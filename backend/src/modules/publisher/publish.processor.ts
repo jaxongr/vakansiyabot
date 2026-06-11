@@ -4,6 +4,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
 import { GrammyError, InlineKeyboard } from 'grammy';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SmsService } from '../sms/sms.service';
 import { BotService } from './bot.service';
 import { TopicsService } from './topics.service';
 import { resumeHtml, vacancyHtml } from './templates';
@@ -21,6 +22,7 @@ export class PublishProcessor extends WorkerHost {
     private readonly prisma: PrismaService,
     private readonly botService: BotService,
     private readonly topics: TopicsService,
+    private readonly sms: SmsService,
     @InjectQueue(DEAD_LETTER_QUEUE) private readonly dlq: Queue,
   ) {
     super();
@@ -106,6 +108,24 @@ export class PublishProcessor extends WorkerHost {
       });
     } catch (error) {
       if ((error as { code?: string }).code !== 'P2002') throw error;
+    }
+
+    // Bot orqali topshirilgan e'lon egasiga SMS xabar (sozlangan bo'lsa)
+    if (vacancy.origin === 'BOT' && vacancy.phones[0]) {
+      await this.notifyPublished(vacancy.phones[0], vacancy.title);
+    }
+  }
+
+  private async notifyPublished(phone: string, title: string): Promise<void> {
+    try {
+      const settings = await this.sms.getSettings();
+      if (!settings.enabled || !settings.notifyOnPublish) return;
+      await this.sms.send(
+        phone,
+        `E'loningiz joylandi: "${title.slice(0, 60)}". Vakansiya botida ko'rishingiz mumkin.`,
+      );
+    } catch (error) {
+      this.logger.warn(`SMS notify failed: ${(error as Error).message}`);
     }
   }
 

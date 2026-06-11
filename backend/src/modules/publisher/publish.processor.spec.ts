@@ -5,6 +5,7 @@ import { Currency, EmploymentType, VacancyStatus } from '@prisma/client';
 import { PublishProcessor } from './publish.processor';
 import { BotService } from './bot.service';
 import { TopicsService } from './topics.service';
+import { SmsService } from '../sms/sms.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DEAD_LETTER_QUEUE, PublishJobData } from '../../queues/queue.types';
 import { vacancyHtml, formatSalary } from './templates';
@@ -63,6 +64,7 @@ describe('PublishProcessor', () => {
         { provide: BotService, useValue: botService },
         { provide: TopicsService, useValue: topics },
         { provide: PrismaService, useValue: prisma },
+        { provide: SmsService, useValue: { getSettings: jest.fn().mockResolvedValue({ enabled: false }), send: jest.fn() } },
         { provide: getQueueToken(DEAD_LETTER_QUEUE), useValue: dlq },
       ],
     }).compile();
@@ -191,6 +193,7 @@ describe('PublishProcessor', () => {
         { provide: BotService, useValue: { instance: null, publishGroupId: null, username: '' } },
         { provide: TopicsService, useValue: topics },
         { provide: PrismaService, useValue: prisma },
+        { provide: SmsService, useValue: { getSettings: jest.fn().mockResolvedValue({ enabled: false }), send: jest.fn() } },
         { provide: getQueueToken(DEAD_LETTER_QUEUE), useValue: dlq },
       ],
     }).compile();

@@ -5,10 +5,13 @@ import { Layout } from './Layout';
 import { isAuthed } from './api/client';
 
 const Overview = lazy(() => import('./pages/Overview').then((m) => ({ default: m.Overview })));
+const Analytics = lazy(() => import('./pages/Analytics').then((m) => ({ default: m.Analytics })));
 const Channels = lazy(() => import('./pages/Channels').then((m) => ({ default: m.Channels })));
 const WebSources = lazy(() => import('./pages/WebSources').then((m) => ({ default: m.WebSources })));
 const Vacancies = lazy(() => import('./pages/Vacancies').then((m) => ({ default: m.Vacancies })));
 const Dedup = lazy(() => import('./pages/Dedup').then((m) => ({ default: m.Dedup })));
+const Telegram = lazy(() => import('./pages/Telegram').then((m) => ({ default: m.Telegram })));
+const Sms = lazy(() => import('./pages/Sms').then((m) => ({ default: m.Sms })));
 const System = lazy(() => import('./pages/System').then((m) => ({ default: m.System })));
 const Login = lazy(() => import('./pages/Login').then((m) => ({ default: m.Login })));
 
@@ -26,10 +29,13 @@ export function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Protected><Overview /></Protected>} />
+          <Route path="/analytics" element={<Protected><Analytics /></Protected>} />
           <Route path="/channels" element={<Protected><Channels /></Protected>} />
           <Route path="/web-sources" element={<Protected><WebSources /></Protected>} />
           <Route path="/vacancies" element={<Protected><Vacancies /></Protected>} />
           <Route path="/dedup" element={<Protected><Dedup /></Protected>} />
+          <Route path="/telegram" element={<Protected><Telegram /></Protected>} />
+          <Route path="/sms" element={<Protected><Sms /></Protected>} />
           <Route path="/system" element={<Protected><System /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

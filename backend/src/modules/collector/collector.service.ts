@@ -29,15 +29,55 @@ export class CollectorService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    const apiId = this.config.get<number>('TG_API_ID');
-    const apiHash = this.config.get<string>('TG_API_HASH');
-    const session = this.config.get<string>('TG_SESSION');
+    // Avval DB sozlamalari (dashboard orqali ulangan), keyin .env
+    const dbSettings = await this.prisma.telegramSetting
+      .findFirst()
+      .catch(() => null);
 
+    const apiId =
+      dbSettings?.collectorEnabled && dbSettings.apiId
+        ? dbSettings.apiId
+        : this.config.get<number>('TG_API_ID');
+    const apiHash =
+      dbSettings?.collectorEnabled && dbSettings.apiHash
+        ? dbSettings.apiHash
+        : this.config.get<string>('TG_API_HASH');
+    const session =
+      dbSettings?.collectorEnabled && dbSettings.session
+        ? dbSettings.session
+        : this.config.get<string>('TG_SESSION');
+
+    await this.connectWith(apiId ?? undefined, apiHash ?? undefined, session ?? undefined);
+  }
+
+  /** Jonli qayta ulanish (dashboard login tugagach yoki o'chirilganda) */
+  async applySettings(
+    apiId: number | null,
+    apiHash: number | string | null,
+    session: string | null,
+  ): Promise<void> {
+    if (this.client) {
+      await this.client.disconnect().catch(() => undefined);
+      this.client = null;
+      this.manager.setClient(null);
+    }
+    if (!apiId || !apiHash || !session) {
+      this.status.set('collector', 'DISABLED', "Collector o'chirildi");
+      return;
+    }
+    await this.connectWith(Number(apiId), String(apiHash), session);
+  }
+
+  private async connectWith(
+    apiId?: number,
+    apiHash?: string,
+    session?: string,
+  ): Promise<void> {
     if (!apiId || !apiHash || !session) {
       this.status.set(
         'collector',
         'DISABLED',
-        "TG_API_ID/TG_API_HASH/TG_SESSION sozlanmagan — collector o'chiq (demo rejim)",
+        "Telegram ulanmagan — dashboard /telegram orqali ulang yoki .env sozlang",
       );
       this.logger.warn('Collector disabled: Telegram credentials missing');
       return;
@@ -51,7 +91,7 @@ export class CollectorService implements OnModuleInit, OnModuleDestroy {
       await this.client.connect();
 
       if (!(await this.client.isUserAuthorized())) {
-        this.status.set('collector', 'DOWN', 'TG_SESSION yaroqsiz (E4004)');
+        this.status.set('collector', 'DOWN', 'Sessiya yaroqsiz (E4004)');
         this.logger.error('Collector session invalid');
         this.client = null;
         return;

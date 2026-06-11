@@ -113,6 +113,87 @@ export function useDedupResolve() {
   });
 }
 
+export function useAnalytics() {
+  return useQuery({
+    queryKey: ['analytics'],
+    queryFn: async () => (await api.get('/stats/analytics')).data.data,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useChannelBulk() {
+  const qc = useQueryClient();
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['channels'] });
+  return {
+    bulk: useMutation({
+      mutationFn: async (usernames: string[]) =>
+        (await api.post('/channels/bulk-import', { usernames })).data,
+      onSuccess: invalidate,
+    }),
+    importSeed: useMutation({
+      mutationFn: async () => (await api.post('/channels/import-seed')).data,
+      onSuccess: invalidate,
+    }),
+  };
+}
+
+export function useSms() {
+  const qc = useQueryClient();
+  const settings = useQuery({
+    queryKey: ['sms-settings'],
+    queryFn: async () => (await api.get('/sms/settings')).data.data,
+  });
+  const logs = useQuery({
+    queryKey: ['sms-logs'],
+    queryFn: async () => (await api.get('/sms/logs?limit=30')).data.data,
+  });
+  const update = useMutation({
+    mutationFn: async (body: Record<string, unknown>) =>
+      (await api.patch('/sms/settings', body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sms-settings'] }),
+  });
+  const test = useMutation({
+    mutationFn: async (body: { phone: string; text: string }) =>
+      (await api.post('/sms/test', body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sms-logs'] }),
+  });
+  const balance = useMutation({
+    mutationFn: async () => (await api.get('/sms/balance')).data.data,
+  });
+  return { settings, logs, update, test, balance };
+}
+
+export function useTelegram() {
+  const qc = useQueryClient();
+  const settings = useQuery({
+    queryKey: ['tg-settings'],
+    queryFn: async () => (await api.get('/telegram/settings')).data.data,
+    refetchInterval: 10_000,
+  });
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['tg-settings'] });
+  return {
+    settings,
+    startLogin: useMutation({
+      mutationFn: async (body: { apiId: number; apiHash: string; phone: string }) =>
+        (await api.post('/telegram/collector/start-login', body)).data.data,
+    }),
+    confirmCode: useMutation({
+      mutationFn: async (body: { loginId: string; code: string; password?: string }) =>
+        (await api.post('/telegram/collector/confirm-code', body)).data.data,
+      onSuccess: invalidate,
+    }),
+    disconnect: useMutation({
+      mutationFn: async () => (await api.post('/telegram/collector/disconnect')).data,
+      onSuccess: invalidate,
+    }),
+    updateBot: useMutation({
+      mutationFn: async (body: Record<string, unknown>) =>
+        (await api.patch('/telegram/bot', body)).data,
+      onSuccess: invalidate,
+    }),
+  };
+}
+
 export function useRefs() {
   const regions = useQuery({
     queryKey: ['regions'],

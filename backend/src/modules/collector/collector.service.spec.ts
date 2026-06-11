@@ -15,6 +15,7 @@ describe('CollectorService', () => {
   const prisma = {
     channel: { findMany: jest.fn().mockResolvedValue([]), update: jest.fn() },
     rawPost: { create: jest.fn() },
+    telegramSetting: { findFirst: jest.fn().mockResolvedValue(null) },
   };
   const queue = { add: jest.fn() };
   const configValues: Record<string, unknown> = {};

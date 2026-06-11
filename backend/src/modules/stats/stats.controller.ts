@@ -17,6 +17,12 @@ export class StatsController {
     return this.stats.overview();
   }
 
+  @Get('analytics')
+  @ApiOperation({ summary: 'Mukammal analitika: funnel, manba, ish turi, maosh, soatlik' })
+  analytics() {
+    return this.stats.analytics();
+  }
+
   @Get('channels')
   @ApiOperation({ summary: 'Top kanallar, dublikat ulushi' })
   channels() {

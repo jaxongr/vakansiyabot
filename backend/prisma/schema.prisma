@@ -77,6 +77,18 @@ enum WebSourceStatus {
   ERROR
 }
 
+enum SmsProvider {
+  ESKIZ
+  PLAYMOBILE
+  CUSTOM
+}
+
+enum SmsStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 // ===================== MODELS =====================
 
 model Channel {
@@ -315,6 +327,63 @@ model PublishedPost {
 
   @@index([vacancyId])
   @@map("published_posts")
+}
+
+/// Telegram ulanish sozlamalari (yagona qator) — collector userbot + publisher bot.
+/// .env o'rniga dashboard orqali sozlanadi (mavjud bo'lsa .env'dan ustun).
+model TelegramSetting {
+  id               String    @id @default(uuid())
+  // Collector (GramJS userbot)
+  apiId            Int?
+  apiHash          String?
+  session          String? // StringSession (login oqimida olinadi)
+  collectorPhone   String?
+  collectorEnabled Boolean   @default(false)
+  collectorStatus  String? // OK | DOWN | CONNECTING | DISABLED
+  // Publisher (grammY bot)
+  botToken         String?
+  botUsername      String?
+  publishGroupId   String?
+  adminIds         String? // vergul bilan
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@map("telegram_settings")
+}
+
+/// SMS-gateway sozlamalari (yagona faol qator). Sozlanmaguncha enabled=false.
+model SmsSetting {
+  id          String      @id @default(uuid())
+  provider    SmsProvider @default(ESKIZ)
+  enabled     Boolean     @default(false)
+  login       String? // Eskiz email yoki PlayMobile login
+  password    String? // parol (token olish uchun)
+  token       String? // keshlangan auth token (Eskiz)
+  tokenExpiry DateTime?
+  sender      String? // alfanumerik sender id ("4546" yoki brend nomi)
+  baseUrl     String? // provider API bazasi (default adapterda)
+  balance     Float? // oxirgi tekshirilgan balans
+  // notification sozlamalari
+  notifyOnPublish Boolean @default(false) // bot orqali topshirilgan vakansiya joylanganda
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("sms_settings")
+}
+
+/// Yuborilgan SMS jurnali
+model SmsLog {
+  id                String    @id @default(uuid())
+  phone             String
+  text              String
+  status            SmsStatus @default(PENDING)
+  providerMessageId String?
+  error             String?
+  createdAt         DateTime  @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("sms_logs")
 }
 
 /// Rezyumelar topic'iga joylangan postlar

@@ -11,13 +11,23 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { ArrayNotEmpty, IsArray, IsString } from 'class-validator';
 import { Role } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ChannelsService } from './channels.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
 import { ListChannelsDto } from './dto/list-channels.dto';
+import { VACANCY_CHANNELS } from './vacancy-channels';
+
+class BulkImportDto {
+  @ApiProperty({ type: [String], description: 'username yoki t.me havola ro`yxati' })
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  usernames!: string[];
+}
 
 @ApiTags('channels')
 @ApiBearerAuth()
@@ -36,6 +46,18 @@ export class ChannelsController {
   @ApiOperation({ summary: 'Kanallar ro`yxati (cursor pagination)' })
   list(@Query() query: ListChannelsDto) {
     return this.channels.list(query.cursor, query.limit);
+  }
+
+  @Post('bulk-import')
+  @ApiOperation({ summary: 'Ko`plab kanalni bittada qo`shish (username/havola ro`yxati)' })
+  bulkImport(@Body() dto: BulkImportDto) {
+    return this.channels.bulkImport(dto.usernames);
+  }
+
+  @Post('import-seed')
+  @ApiOperation({ summary: 'Tayyor O`zbekiston vakansiya kanallarini import qilish' })
+  importSeed() {
+    return this.channels.bulkImport(VACANCY_CHANNELS.map((c) => c.username));
   }
 
   @Patch(':id')

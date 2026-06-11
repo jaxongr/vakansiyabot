@@ -26,6 +26,8 @@ import { RefsModule } from './modules/refs/refs.module';
 import { UsersModule } from './modules/users/users.module';
 import { StatsModule } from './modules/stats/stats.module';
 import { ScraperModule } from './modules/scraper/scraper.module';
+import { SmsModule } from './modules/sms/sms.module';
+import { TelegramModule } from './modules/telegram/telegram.module';
 
 @Module({
   imports: [
@@ -65,6 +67,8 @@ import { ScraperModule } from './modules/scraper/scraper.module';
     UsersModule,
     StatsModule,
     ScraperModule,
+    SmsModule,
+    TelegramModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
