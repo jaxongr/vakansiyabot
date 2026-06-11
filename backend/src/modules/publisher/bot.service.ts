@@ -6,6 +6,7 @@ import { Bot, Context } from 'grammy';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SystemStatusService } from '../system/system-status.service';
 import { parseAdminIds } from '../../config/configuration';
+import { IntakeService } from '../intake/intake.service';
 import { TopicsService } from './topics.service';
 import { ANALYZE_QUEUE, DEDUP_QUEUE, PUBLISH_QUEUE } from '../../queues/queue.types';
 
@@ -22,6 +23,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly status: SystemStatusService,
     private readonly topics: TopicsService,
+    private readonly intake: IntakeService,
     @InjectQueue(ANALYZE_QUEUE) private readonly analyzeQueue: Queue,
     @InjectQueue(DEDUP_QUEUE) private readonly dedupQueue: Queue,
     @InjectQueue(PUBLISH_QUEUE) private readonly publishQueue: Queue,
@@ -56,6 +58,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       const me = await this.bot.api.getMe();
       this.botUsername = this.config.get<string>('BOT_USERNAME') || me.username;
       this.registerCommands();
+      this.intake.register(this.bot); // e'lon/rezyume topshirish wizard'i
       this.topics.attach(this.bot, this.groupId);
 
       await this.verifyGroup();

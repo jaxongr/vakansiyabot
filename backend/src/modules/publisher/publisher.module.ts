@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { BotService } from './bot.service';
 import { TopicsService } from './topics.service';
 import { PublishProcessor } from './publish.processor';
+import { IntakeModule } from '../intake/intake.module';
 import {
   ANALYZE_QUEUE,
   DEAD_LETTER_QUEUE,
@@ -19,6 +20,7 @@ import {
       { name: PUBLISH_QUEUE, defaultJobOptions: DEFAULT_JOB_OPTIONS },
       { name: DEAD_LETTER_QUEUE },
     ),
+    IntakeModule,
   ],
   providers: [BotService, TopicsService, PublishProcessor],
   exports: [BotService, TopicsService],
