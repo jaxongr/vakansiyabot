@@ -1,0 +1,307 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===================== ENUMS =====================
+
+enum ChannelType {
+  CHANNEL
+  GROUP
+}
+
+enum ChannelStatus {
+  ACTIVE
+  PAUSED
+  BANNED
+}
+
+enum Currency {
+  UZS
+  USD
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  REMOTE
+  SHIFT
+}
+
+enum VacancyStatus {
+  ACTIVE
+  EXPIRED
+  HIDDEN
+}
+
+enum DedupReviewStatus {
+  PENDING
+  MERGED
+  SEPARATED
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+/// Kanal posti kim haqida: ish beruvchi e'loni, ish izlovchi rezyumesi yoki boshqa
+enum PostKind {
+  VACANCY
+  RESUME
+  OTHER
+}
+
+/// Yozuv qayerdan kelgan: kanaldan yig'ilgan yoki bot orqali topshirilgan
+enum Origin {
+  CHANNEL
+  BOT
+}
+
+// ===================== MODELS =====================
+
+model Channel {
+  id         String        @id @default(uuid())
+  tgId       BigInt        @unique
+  username   String?
+  title      String
+  type       ChannelType
+  status     ChannelStatus @default(ACTIVE)
+  postsCount Int           @default(0)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  deletedAt  DateTime?
+
+  rawPosts RawPost[]
+
+  @@index([status])
+  @@map("channels")
+}
+
+model RawPost {
+  id          String   @id @default(uuid())
+  channelId   String
+  tgMessageId BigInt
+  text        String
+  textHash    String // normalized SHA-256
+  postedAt    DateTime
+  processed   Boolean   @default(false)
+  kind        PostKind? // analyzer natijasi: VACANCY | RESUME | OTHER
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  channel Channel         @relation(fields: [channelId], references: [id])
+  sources VacancySource[]
+
+  @@unique([channelId, tgMessageId])
+  @@index([processed])
+  @@index([textHash])
+  @@map("raw_posts")
+}
+
+model Vacancy {
+  id             String         @id @default(uuid())
+  title          String
+  description    String
+  company        String?
+  regionId       String
+  district       String?
+  categoryId     String
+  salaryMin      Int?
+  salaryMax      Int?
+  currency       Currency       @default(UZS)
+  employmentType EmploymentType @default(FULL_TIME)
+  phones         String[]
+  tgContact      String?
+  status         VacancyStatus  @default(ACTIVE)
+  origin         Origin         @default(CHANNEL)
+  submittedById  String? // bot orqali topshirgan AppUser
+  simhash        String? // 64-bit simhash hex — dedup uchun
+  firstSeenAt    DateTime
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+
+  region        Region          @relation(fields: [regionId], references: [id])
+  category      Category        @relation(fields: [categoryId], references: [id])
+  submittedBy   AppUser?        @relation("SubmittedVacancies", fields: [submittedById], references: [id])
+  sources       VacancySource[]
+  publishedPost PublishedPost?
+  savedBy       SavedVacancy[]
+  reviewsA      DedupReview[]   @relation("ReviewVacancyA")
+  reviewsB      DedupReview[]   @relation("ReviewVacancyB")
+
+  @@index([regionId, status, createdAt])
+  @@index([categoryId, status])
+  @@index([status, createdAt])
+  @@index([simhash])
+  @@map("vacancies")
+}
+
+// 1 vakansiya -> N kanal posti
+model VacancySource {
+  vacancyId String
+  rawPostId String
+  createdAt DateTime @default(now())
+
+  vacancy Vacancy @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
+  rawPost RawPost @relation(fields: [rawPostId], references: [id])
+
+  @@id([vacancyId, rawPostId])
+  @@map("vacancy_sources")
+}
+
+model Region {
+  id        String   @id @default(uuid())
+  code      String   @unique // "toshkent-shahri", "remote", "other", "resumes"...
+  nameUz    String // "Samarqand"
+  nameCyr   String // "Самарқанд"
+  tgTopicId Int? // bot yaratgan forum topic message_thread_id
+  special   Boolean  @default(false) // remote/other/resumes — geografik emas
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vacancies Vacancy[]
+  resumes   Resume[]
+  users     AppUser[]
+
+  @@map("regions")
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  code      String   @unique // "it", "savdo"...
+  nameUz    String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vacancies Vacancy[]
+  resumes   Resume[]
+
+  @@map("categories")
+}
+
+/// Ish izlovchi rezyumesi — bot orqali yoki kanaldan ("ish izlayman" postlari)
+model Resume {
+  id                 String        @id @default(uuid())
+  fullName           String
+  age                Int?
+  title              String // izlayotgan kasb/lavozim
+  about              String // o'zi haqida to'liq matn
+  regionId           String
+  categoryId         String
+  experienceYears    Int?
+  experience         String? // ish tajribasi tavsifi
+  education          String?
+  skills             String[]
+  salaryExpectation  Int?
+  currency           Currency      @default(UZS)
+  phones             String[]
+  tgContact          String?
+  status             VacancyStatus @default(ACTIVE)
+  origin             Origin        @default(CHANNEL)
+  rawPostId          String? // kanaldan kelgan bo'lsa
+  submittedById      String? // bot orqali topshirgan AppUser
+  simhash            String?
+  firstSeenAt        DateTime
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  deletedAt          DateTime?
+
+  region          Region           @relation(fields: [regionId], references: [id])
+  category        Category         @relation(fields: [categoryId], references: [id])
+  submittedBy     AppUser?         @relation("SubmittedResumes", fields: [submittedById], references: [id])
+  publishedResume PublishedResume?
+
+  @@index([regionId, status, createdAt])
+  @@index([categoryId, status])
+  @@index([status, createdAt])
+  @@map("resumes")
+}
+
+model AppUser {
+  id               String    @id @default(uuid())
+  tgUserId         BigInt    @unique
+  username         String?
+  firstName        String?
+  regionId         String?
+  role             Role      @default(USER)
+  refreshTokenHash String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  region              Region?        @relation(fields: [regionId], references: [id])
+  savedVacancies      SavedVacancy[]
+  submittedVacancies  Vacancy[]      @relation("SubmittedVacancies")
+  submittedResumes    Resume[]       @relation("SubmittedResumes")
+
+  @@map("app_users")
+}
+
+model SavedVacancy {
+  userId    String
+  vacancyId String
+  createdAt DateTime @default(now())
+
+  user    AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vacancy Vacancy @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
+
+  @@id([userId, vacancyId])
+  @@map("saved_vacancies")
+}
+
+// guruhga joylangan e'lonlar
+model PublishedPost {
+  id          String   @id @default(uuid())
+  vacancyId   String   @unique
+  tgChatId    BigInt // PUBLISH_GROUP_ID
+  tgMessageId Int // edit/delete uchun
+  tgTopicId   Int // qaysi viloyat mavzusiga
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vacancy Vacancy @relation(fields: [vacancyId], references: [id])
+
+  @@index([vacancyId])
+  @@map("published_posts")
+}
+
+/// Rezyumelar topic'iga joylangan postlar
+model PublishedResume {
+  id          String   @id @default(uuid())
+  resumeId    String   @unique
+  tgChatId    BigInt
+  tgMessageId Int
+  tgTopicId   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  resume Resume @relation(fields: [resumeId], references: [id])
+
+  @@map("published_resumes")
+}
+
+// 0.85-0.92 oralig'idagi shubhali juftliklar — admin qo'lda hal qiladi
+model DedupReview {
+  id         String            @id @default(uuid())
+  vacancyAId String // mavjud vakansiya
+  vacancyBId String // yangi (shubhali dublikat)
+  similarity Float
+  status     DedupReviewStatus @default(PENDING)
+  resolvedAt DateTime?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  vacancyA Vacancy @relation("ReviewVacancyA", fields: [vacancyAId], references: [id])
+  vacancyB Vacancy @relation("ReviewVacancyB", fields: [vacancyBId], references: [id])
+
+  @@index([status])
+  @@map("dedup_reviews")
+}

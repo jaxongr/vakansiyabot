@@ -1,0 +1,19 @@
+/** Loyiha error kodlari — Master E-kodlar + loyihaga xos 4xxx */
+export enum ErrorCode {
+  // Umumiy
+  VALIDATION = 'E1000',
+  UNAUTHORIZED = 'E1001',
+  FORBIDDEN = 'E1002',
+  NOT_FOUND = 'E1003',
+  CONFLICT = 'E1004',
+  RATE_LIMITED = 'E1005',
+  INTERNAL = 'E5000',
+
+  // Loyihaga xos
+  INVALID_INIT_DATA = 'E4001',
+  CHANNEL_ALREADY_MONITORED = 'E4002',
+  CHANNEL_JOIN_FAILED = 'E4003',
+  COLLECTOR_SESSION_INVALID = 'E4004',
+  PUBLISH_GROUP_MISCONFIGURED = 'E4005',
+  TOPIC_CREATION_FAILED = 'E4006',
+}
