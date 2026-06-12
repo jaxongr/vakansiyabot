@@ -194,6 +194,48 @@ export function useTelegram() {
   };
 }
 
+export function useBilling() {
+  const qc = useQueryClient();
+  const payments = useQuery({
+    queryKey: ['payments'],
+    queryFn: async () => (await api.get('/billing/payments')).data.data,
+  });
+  const revenue = useQuery({
+    queryKey: ['revenue'],
+    queryFn: async () => (await api.get('/billing/revenue')).data.data,
+    refetchInterval: 60_000,
+  });
+  const plans = useQuery({
+    queryKey: ['plans'],
+    queryFn: async () => (await api.get('/plans')).data.data,
+  });
+  const confirm = useMutation({
+    mutationFn: async (id: string) => (await api.post(`/billing/payments/${id}/confirm`)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['payments'] });
+      qc.invalidateQueries({ queryKey: ['revenue'] });
+    },
+  });
+  return { payments, revenue, plans, confirm };
+}
+
+export function useDiscovery() {
+  const qc = useQueryClient();
+  const list = useQuery({
+    queryKey: ['discovery'],
+    queryFn: async () => (await api.get('/discovery/channels')).data.data,
+  });
+  const resolve = useMutation({
+    mutationFn: async ({ id, action }: { id: string; action: 'approve' | 'reject' }) =>
+      (await api.post(`/discovery/channels/${id}`, { action })).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['discovery'] });
+      qc.invalidateQueries({ queryKey: ['channels'] });
+    },
+  });
+  return { list, resolve };
+}
+
 export function useRefs() {
   const regions = useQuery({
     queryKey: ['regions'],

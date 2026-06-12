@@ -88,7 +88,7 @@ export class BrowseService {
             this.prisma.vacancy.findMany({
               where,
               include: { region: true },
-              orderBy: { createdAt: 'desc' },
+              orderBy: [{ featured: 'desc' }, { createdAt: 'desc' }],
               skip,
               take: PAGE_SIZE,
             }),
@@ -146,8 +146,9 @@ export class BrowseService {
         REMOTE: 'Masofaviy',
         SHIFT: 'Smenali',
       };
+      const star = item.featured ? '⭐ ' : '';
       return [
-        `💼 <b>${this.esc(item.title as string)}</b>`,
+        `${star}💼 <b>${this.esc(item.title as string)}</b>`,
         `📍 ${region} | 💰 ${salary} | 🕘 ${empMap[item.employmentType as EmploymentType] ?? ''}`,
         (item.phones as string[])?.[0] ? `📞 +${(item.phones as string[])[0]}` : '',
         '',

@@ -24,6 +24,7 @@ const LIST_SELECT = {
   employmentType: true,
   status: true,
   origin: true,
+  featured: true,
   firstSeenAt: true,
   createdAt: true,
   region: { select: { id: true, code: true, nameUz: true } },
@@ -55,7 +56,8 @@ export class VacanciesService {
       const rows = await this.prisma.vacancy.findMany({
         where: this.buildWhere(dto),
         select: LIST_SELECT,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        // featured (promote qilingan) e'lonlar tepada
+        orderBy: [{ featured: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
         take: limit + 1,
         ...(dto.cursor ? { cursor: { id: dto.cursor }, skip: 1 } : {}),
       });

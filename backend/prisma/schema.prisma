@@ -89,6 +89,33 @@ enum SmsStatus {
   FAILED
 }
 
+enum PlanCode {
+  FREE
+  PREMIUM_SEEKER
+  EMPLOYER_BASIC
+  EMPLOYER_PRO
+}
+
+enum PaymentProvider {
+  PAYME
+  CLICK
+  MANUAL
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentPurpose {
+  SUBSCRIPTION
+  FEATURED_VACANCY
+  FEATURED_RESUME
+  RESUME_ACCESS
+}
+
 // ===================== MODELS =====================
 
 model Channel {
@@ -174,6 +201,8 @@ model Vacancy {
   status         VacancyStatus  @default(ACTIVE)
   origin         Origin         @default(CHANNEL)
   submittedById  String? // bot orqali topshirgan AppUser
+  featured       Boolean        @default(false) // promote qilingan — tepada
+  promotedUntil  DateTime? // featured tugash vaqti
   simhash        String? // 64-bit simhash hex — dedup uchun
   /// Raw SQL migratsiyada boshqariladi (GENERATED tsvector) — full-text qidiruv uchun
   searchVector   Unsupported("tsvector")? @map("search_vector")
@@ -194,6 +223,7 @@ model Vacancy {
   @@index([regionId, status, createdAt])
   @@index([categoryId, status])
   @@index([status, createdAt])
+  @@index([status, featured, createdAt])
   @@index([simhash])
   @@map("vacancies")
 }
@@ -264,6 +294,8 @@ model Resume {
   origin             Origin        @default(CHANNEL)
   rawPostId          String? // kanaldan kelgan bo'lsa
   submittedById      String? // bot orqali topshirgan AppUser
+  featured           Boolean       @default(false)
+  promotedUntil      DateTime?
   simhash            String?
   firstSeenAt        DateTime
   createdAt          DateTime      @default(now())
@@ -297,8 +329,24 @@ model AppUser {
   savedVacancies      SavedVacancy[]
   submittedVacancies  Vacancy[]      @relation("SubmittedVacancies")
   submittedResumes    Resume[]       @relation("SubmittedResumes")
+  subscriptions       Subscription[]
+  payments            Payment[]
 
   @@map("app_users")
+}
+
+/// Avto-kashfiyot: yig'ilgan postlardan topilgan kanal nomzodlari
+model DiscoveredChannel {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  mentions     Int      @default(1) // necha marta uchragan
+  status       String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  firstSeenIn  String? // qaysi kanaldan topilgan (title)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status, mentions])
+  @@map("discovered_channels")
 }
 
 model SavedVacancy {
@@ -327,6 +375,66 @@ model PublishedPost {
 
   @@index([vacancyId])
   @@map("published_posts")
+}
+
+/// Tarif rejalari (seed orqali)
+model Plan {
+  id          String   @id @default(uuid())
+  code        PlanCode @unique
+  name        String
+  priceUzs    Int      @default(0)
+  durationDays Int     @default(30)
+  vacancyLimit Int?    // oyiga e'lon limiti (null = cheksiz / mavjud emas)
+  resumeAccess Boolean @default(false) // rezyume bazasiga kirish
+  features    String[] // ko'rsatish uchun xususiyatlar ro'yxati
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+/// Foydalanuvchi obunasi
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String
+  planId    String
+  startsAt  DateTime @default(now())
+  expiresAt DateTime
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan    @relation(fields: [planId], references: [id])
+
+  @@index([userId, active])
+  @@map("subscriptions")
+}
+
+/// To'lov yozuvi (Payme/Click/Manual)
+model Payment {
+  id          String          @id @default(uuid())
+  userId      String?
+  amountUzs   Int
+  provider    PaymentProvider @default(MANUAL)
+  status      PaymentStatus   @default(PENDING)
+  purpose     PaymentPurpose
+  referenceId String? // vacancyId/resumeId/planId
+  providerTxnId String?
+  meta        Json?
+  paidAt      DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  user AppUser? @relation(fields: [userId], references: [id])
+
+  @@index([status])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("payments")
 }
 
 /// Telegram ulanish sozlamalari (yagona qator) — collector userbot + publisher bot.

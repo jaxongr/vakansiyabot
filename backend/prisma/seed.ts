@@ -63,6 +63,58 @@ async function main() {
     order += 1;
   }
   console.log(`Seeded ${CATEGORIES.length} categories`);
+
+  // Tarif rejalari (monetizatsiya)
+  const plans = [
+    {
+      code: 'FREE' as const,
+      name: 'Bepul',
+      priceUzs: 0,
+      durationDays: 3650,
+      vacancyLimit: null,
+      resumeAccess: false,
+      features: ['Vakansiyalarni ko`rish', 'Qidiruv va filtr', 'Saqlash'],
+      sortOrder: 1,
+    },
+    {
+      code: 'PREMIUM_SEEKER' as const,
+      name: 'Premium (ish izlovchi)',
+      priceUzs: 19000,
+      durationDays: 30,
+      vacancyLimit: null,
+      resumeAccess: false,
+      features: ['Yangi mos vakansiyadan birinchi SMS xabar', 'Reklamasiz', 'Kengaytirilgan filtr'],
+      sortOrder: 2,
+    },
+    {
+      code: 'EMPLOYER_BASIC' as const,
+      name: 'Ish beruvchi — Basic',
+      priceUzs: 99000,
+      durationDays: 30,
+      vacancyLimit: 20,
+      resumeAccess: false,
+      features: ['Oyiga 20 ta e`lon', 'Statistika', 'Prioritet joylash'],
+      sortOrder: 3,
+    },
+    {
+      code: 'EMPLOYER_PRO' as const,
+      name: 'Ish beruvchi — Pro',
+      priceUzs: 299000,
+      durationDays: 30,
+      vacancyLimit: null,
+      resumeAccess: true,
+      features: ['Cheksiz e`lon', 'Rezyume bazasiga kirish', 'Featured chegirma', 'To`liq statistika'],
+      sortOrder: 4,
+    },
+  ];
+  for (const plan of plans) {
+    await prisma.plan.upsert({
+      where: { code: plan.code },
+      update: { ...plan },
+      create: { ...plan },
+    });
+  }
+  console.log(`Seeded ${plans.length} plans`);
 }
 
 main()

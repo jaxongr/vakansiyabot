@@ -5,6 +5,7 @@ import { Job } from 'bullmq';
 import { AnalyzerProcessor } from './analyzer.processor';
 import { RulesService } from './rules.service';
 import { LlmService } from './llm.service';
+import { DiscoveryService } from './discovery.service';
 import { NormalizeService } from '../dedup/normalize.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ANALYZE_QUEUE, DEAD_LETTER_QUEUE, DEDUP_QUEUE } from '../../queues/queue.types';
@@ -30,6 +31,7 @@ describe('AnalyzerProcessor (pipeline)', () => {
         RulesService,
         NormalizeService,
         LlmService,
+        { provide: DiscoveryService, useValue: { harvest: jest.fn() } },
         { provide: ConfigService, useValue: { get: jest.fn() } }, // LLM o'chiq
         { provide: PrismaService, useValue: prisma },
         { provide: getQueueToken(DEDUP_QUEUE), useValue: dedupQueue },

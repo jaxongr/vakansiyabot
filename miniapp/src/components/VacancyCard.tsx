@@ -30,7 +30,18 @@ const Meta = styled.div`
 export function VacancyCard({ v }: { v: VacancyListItem }) {
   const navigate = useNavigate();
   return (
-    <Card onClick={() => navigate(`/vacancy/${v.id}`)} style={{ cursor: 'pointer' }}>
+    <Card
+      onClick={() => navigate(`/vacancy/${v.id}`)}
+      style={{
+        cursor: 'pointer',
+        ...(v.featured ? { borderColor: '#F59E0B', borderWidth: 1.5 } : {}),
+      }}
+    >
+      {v.featured && (
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#F59E0B', marginBottom: 4 }}>
+          ⭐ TOP e'lon
+        </div>
+      )}
       <Title>{v.title}</Title>
       <Row>
         <Pill>📍 {v.region.nameUz}</Pill>

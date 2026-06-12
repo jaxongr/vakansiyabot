@@ -10,6 +10,8 @@ const Channels = lazy(() => import('./pages/Channels').then((m) => ({ default: m
 const WebSources = lazy(() => import('./pages/WebSources').then((m) => ({ default: m.WebSources })));
 const Vacancies = lazy(() => import('./pages/Vacancies').then((m) => ({ default: m.Vacancies })));
 const Dedup = lazy(() => import('./pages/Dedup').then((m) => ({ default: m.Dedup })));
+const Discovery = lazy(() => import('./pages/Discovery').then((m) => ({ default: m.Discovery })));
+const Monetization = lazy(() => import('./pages/Monetization').then((m) => ({ default: m.Monetization })));
 const Telegram = lazy(() => import('./pages/Telegram').then((m) => ({ default: m.Telegram })));
 const Sms = lazy(() => import('./pages/Sms').then((m) => ({ default: m.Sms })));
 const System = lazy(() => import('./pages/System').then((m) => ({ default: m.System })));
@@ -34,6 +36,8 @@ export function App() {
           <Route path="/web-sources" element={<Protected><WebSources /></Protected>} />
           <Route path="/vacancies" element={<Protected><Vacancies /></Protected>} />
           <Route path="/dedup" element={<Protected><Dedup /></Protected>} />
+          <Route path="/discovery" element={<Protected><Discovery /></Protected>} />
+          <Route path="/monetization" element={<Protected><Monetization /></Protected>} />
           <Route path="/telegram" element={<Protected><Telegram /></Protected>} />
           <Route path="/sms" element={<Protected><Sms /></Protected>} />
           <Route path="/system" element={<Protected><System /></Protected>} />

@@ -4,7 +4,10 @@ import { RulesService } from './rules.service';
 import { LlmService } from './llm.service';
 import { AnalyzerProcessor } from './analyzer.processor';
 import { SchedulerService } from './scheduler.service';
+import { DiscoveryService } from './discovery.service';
+import { DiscoveryController } from './discovery.controller';
 import { DedupModule } from '../dedup/dedup.module';
+import { ChannelsModule } from '../channels/channels.module';
 import {
   ANALYZE_QUEUE,
   DEAD_LETTER_QUEUE,
@@ -22,8 +25,10 @@ import {
       { name: DEAD_LETTER_QUEUE },
     ),
     DedupModule,
+    ChannelsModule,
   ],
-  providers: [RulesService, LlmService, AnalyzerProcessor, SchedulerService],
-  exports: [RulesService, LlmService],
+  controllers: [DiscoveryController],
+  providers: [RulesService, LlmService, AnalyzerProcessor, SchedulerService, DiscoveryService],
+  exports: [RulesService, LlmService, DiscoveryService],
 })
 export class AnalyzerModule {}

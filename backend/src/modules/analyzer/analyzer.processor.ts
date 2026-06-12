@@ -5,6 +5,7 @@ import { PostKind } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RulesService } from './rules.service';
 import { LlmService } from './llm.service';
+import { DiscoveryService } from './discovery.service';
 import {
   ANALYZE_QUEUE,
   AnalyzeJobData,
@@ -22,6 +23,7 @@ export class AnalyzerProcessor extends WorkerHost {
     private readonly prisma: PrismaService,
     private readonly rules: RulesService,
     private readonly llm: LlmService,
+    private readonly discovery: DiscoveryService,
     @InjectQueue(DEDUP_QUEUE) private readonly dedupQueue: Queue<DedupJobData>,
     @InjectQueue(DEAD_LETTER_QUEUE) private readonly dlq: Queue,
   ) {
@@ -31,6 +33,9 @@ export class AnalyzerProcessor extends WorkerHost {
   async process(job: Job<AnalyzeJobData>): Promise<void> {
     const rawPost = await this.prisma.rawPost.findUnique({ where: { id: job.data.rawPostId } });
     if (!rawPost || rawPost.processed) return;
+
+    // avto-kashfiyot: har postdan kanal nomzodlarini yig'amiz (dedupdan oldin)
+    await this.discovery.harvest(rawPost.text);
 
     // 1. textHash dublikatmi? -> mavjud vakansiyaga VacancySource qo'shib STOP
     const attached = await this.attachIfKnownHash(rawPost.id, rawPost.textHash);

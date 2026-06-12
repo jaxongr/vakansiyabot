@@ -26,6 +26,7 @@ export interface VacancyListItem {
   currency: 'UZS' | 'USD';
   employmentType: EmploymentType;
   origin: 'CHANNEL' | 'BOT' | 'WEB';
+  featured?: boolean;
   createdAt: string;
   region: { id: string; code: string; nameUz: string };
   category: { id: string; code: string; nameUz: string };
