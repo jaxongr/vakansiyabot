@@ -118,9 +118,15 @@ export function ResumePage() {
       </Card>
 
       <Actions>
-        <Button onClick={openContact}>
-          {r.tgContact ? "✈️ Bog'lanish" : r.phones[0] ? "📞 Qo'ng'iroq" : "Aloqa yo'q"}
-        </Button>
+        {r.contactLocked ? (
+          <Button $variant="ghost" onClick={() => alert(r.lockMessage ?? 'Pro obuna kerak')}>
+            🔒 Kontakt — Pro obuna kerak
+          </Button>
+        ) : (
+          <Button onClick={openContact}>
+            {r.tgContact ? "✈️ Bog'lanish" : r.phones[0] ? "📞 Qo'ng'iroq" : "Aloqa yo'q"}
+          </Button>
+        )}
       </Actions>
     </Screen>
   );

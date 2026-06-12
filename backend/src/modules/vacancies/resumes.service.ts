@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, VacancyStatus } from '@prisma/client';
+import { Prisma, Role, VacancyStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { BillingService } from '../billing/billing.service';
 import { AppException } from '../../common/errors/app.exception';
 import { buildCursorPage } from '../../common/pagination/cursor';
 import { ListVacanciesDto } from './dto/list-vacancies.dto';
@@ -24,7 +25,10 @@ const RESUME_SELECT = {
 /** Ish beruvchilar uchun rezyumelar ro'yxati */
 @Injectable()
 export class ResumesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly billing: BillingService,
+  ) {}
 
   async list(dto: ListVacanciesDto) {
     const limit = dto.limit ?? 20;
@@ -51,7 +55,11 @@ export class ResumesService {
     return buildCursorPage(rows, limit);
   }
 
-  async detail(id: string) {
+  /**
+   * Rezyume tafsiloti. Kontakt (telefon/tg) faqat Pro obunaga ega ish
+   * beruvchilarga (yoki adminga) ochiq — hh.uz modeli.
+   */
+  async detail(id: string, userId: string, role: Role) {
     const resume = await this.prisma.resume.findFirst({
       where: { id, deletedAt: null },
       include: {
@@ -60,6 +68,18 @@ export class ResumesService {
       },
     });
     if (!resume) throw AppException.notFound('Rezyume topilmadi');
-    return resume;
+
+    const hasAccess = role === Role.ADMIN || (await this.billing.hasResumeAccess(userId));
+    if (hasAccess) {
+      return { ...resume, contactLocked: false };
+    }
+    // kontaktni yashiramiz, Pro taklif qilamiz
+    return {
+      ...resume,
+      phones: [],
+      tgContact: null,
+      contactLocked: true,
+      lockMessage: "Kontaktni ko'rish uchun Employer Pro obunasi kerak",
+    };
   }
 }

@@ -163,6 +163,15 @@ export class BillingService {
 
   // ===================== Foydalanuvchi obunasi =====================
 
+  /** Foydalanuvchida rezyume bazasiga kirish huquqi bormi (Pro obuna) */
+  async hasResumeAccess(userId: string): Promise<boolean> {
+    const sub = await this.prisma.subscription.findFirst({
+      where: { userId, active: true, expiresAt: { gt: new Date() }, plan: { resumeAccess: true } },
+      select: { id: true },
+    });
+    return Boolean(sub);
+  }
+
   async mySubscription(userId: string) {
     const sub = await this.prisma.subscription.findFirst({
       where: { userId, active: true, expiresAt: { gt: new Date() } },
@@ -188,27 +197,39 @@ export class BillingService {
     since.setDate(since.getDate() - 30);
     since.setHours(0, 0, 0, 0);
 
-    const [paidAgg, pendingCount, daily, byPurpose] = await Promise.all([
-      this.prisma.payment.aggregate({
-        where: { status: PaymentStatus.PAID },
-        _sum: { amountUzs: true },
-        _count: { _all: true },
-      }),
-      this.prisma.payment.count({ where: { status: PaymentStatus.PENDING } }),
-      this.prisma.$queryRaw<Array<{ day: Date; sum: bigint }>>`
-        SELECT date_trunc('day', "paidAt") AS day, sum("amountUzs") AS sum
-        FROM "payments" WHERE "status" = 'PAID' AND "paidAt" >= ${since}
-        GROUP BY 1 ORDER BY 1`,
-      this.prisma.payment.groupBy({
-        by: ['purpose'],
-        where: { status: PaymentStatus.PAID },
-        _sum: { amountUzs: true },
-        _count: { _all: true },
-      }),
-    ]);
+    const [paidAgg, pendingCount, daily, byPurpose, payingUsers, totalUsers, featuredCount, activeSubs] =
+      await Promise.all([
+        this.prisma.payment.aggregate({
+          where: { status: PaymentStatus.PAID },
+          _sum: { amountUzs: true },
+          _count: { _all: true },
+        }),
+        this.prisma.payment.count({ where: { status: PaymentStatus.PENDING } }),
+        this.prisma.$queryRaw<Array<{ day: Date; sum: bigint }>>`
+          SELECT date_trunc('day', "paidAt") AS day, sum("amountUzs") AS sum
+          FROM "payments" WHERE "status" = 'PAID' AND "paidAt" >= ${since}
+          GROUP BY 1 ORDER BY 1`,
+        this.prisma.payment.groupBy({
+          by: ['purpose'],
+          where: { status: PaymentStatus.PAID },
+          _sum: { amountUzs: true },
+          _count: { _all: true },
+        }),
+        this.prisma.payment.findMany({
+          where: { status: PaymentStatus.PAID, userId: { not: null } },
+          distinct: ['userId'],
+          select: { userId: true },
+        }),
+        this.prisma.appUser.count({ where: { deletedAt: null } }),
+        this.prisma.vacancy.count({ where: { featured: true } }),
+        this.prisma.subscription.count({ where: { active: true, expiresAt: { gt: new Date() } } }),
+      ]);
+
+    const revenue = paidAgg._sum.amountUzs ?? 0;
+    const payingCount = payingUsers.length;
 
     return {
-      totalRevenue: paidAgg._sum.amountUzs ?? 0,
+      totalRevenue: revenue,
       paidCount: paidAgg._count._all,
       pendingCount,
       daily: daily.map((d) => ({ day: d.day, sum: Number(d.sum) })),
@@ -217,6 +238,13 @@ export class BillingService {
         sum: p._sum.amountUzs ?? 0,
         count: p._count._all,
       })),
+      // Konversiya metrikalari
+      totalUsers,
+      payingUsers: payingCount,
+      conversionRate: totalUsers > 0 ? Math.round((payingCount / totalUsers) * 1000) / 10 : 0,
+      arpu: payingCount > 0 ? Math.round(revenue / payingCount) : 0,
+      featuredActive: featuredCount,
+      activeSubscriptions: activeSubs,
     };
   }
 

@@ -42,9 +42,9 @@ describe('Vacancies/Resumes controllers (delegatsiya)', () => {
 
   it('resumes list/detail delegatsiya', async () => {
     await rc.list({ limit: 20 });
-    await rc.detail('r1');
+    await rc.detail('r1', user);
     expect(resumesService.list).toHaveBeenCalled();
-    expect(resumesService.detail).toHaveBeenCalledWith('r1');
+    expect(resumesService.detail).toHaveBeenCalledWith('r1', 'u1', 'USER');
   });
 });
 
@@ -52,10 +52,11 @@ describe('ResumesService', () => {
   const prisma = {
     resume: { findMany: jest.fn(), findFirst: jest.fn() },
   };
+  const billing = { hasResumeAccess: jest.fn().mockResolvedValue(false) };
 
   it('list -> cursor page', async () => {
     prisma.resume.findMany.mockResolvedValue([{ id: 'r1' }]);
-    const svc = new ResumesService(prisma as never);
+    const svc = new ResumesService(prisma as never, billing as never);
     const res = await svc.list({ limit: 20, regionId: 'reg1' });
     expect(res.data).toHaveLength(1);
     expect(prisma.resume.findMany).toHaveBeenCalledWith(
@@ -65,7 +66,39 @@ describe('ResumesService', () => {
 
   it('detail topilmasa E1003', async () => {
     prisma.resume.findFirst.mockResolvedValue(null);
-    const svc = new ResumesService(prisma as never);
-    await expect(svc.detail('yoq')).rejects.toMatchObject({ code: 'E1003' });
+    const svc = new ResumesService(prisma as never, billing as never);
+    await expect(svc.detail('yoq', 'u1', 'USER' as never)).rejects.toMatchObject({ code: 'E1003' });
+  });
+
+  it('Pro yo`q -> kontakt qulflanadi', async () => {
+    prisma.resume.findFirst.mockResolvedValue({
+      id: 'r1',
+      phones: ['998901112233'],
+      tgContact: '@a',
+    });
+    billing.hasResumeAccess.mockResolvedValue(false);
+    const svc = new ResumesService(prisma as never, billing as never);
+    const res = (await svc.detail('r1', 'u1', 'USER' as never)) as {
+      contactLocked: boolean;
+      phones: string[];
+    };
+    expect(res.contactLocked).toBe(true);
+    expect(res.phones).toEqual([]);
+  });
+
+  it('Pro bor -> kontakt ochiq', async () => {
+    prisma.resume.findFirst.mockResolvedValue({
+      id: 'r1',
+      phones: ['998901112233'],
+      tgContact: '@a',
+    });
+    billing.hasResumeAccess.mockResolvedValue(true);
+    const svc = new ResumesService(prisma as never, billing as never);
+    const res = (await svc.detail('r1', 'u1', 'USER' as never)) as {
+      contactLocked: boolean;
+      phones: string[];
+    };
+    expect(res.contactLocked).toBe(false);
+    expect(res.phones).toEqual(['998901112233']);
   });
 });

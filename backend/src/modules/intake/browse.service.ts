@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Bot, Context, InlineKeyboard } from 'grammy';
-import { Currency, EmploymentType, VacancyStatus } from '@prisma/client';
+import { Currency, EmploymentType, PaymentProvider, VacancyStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { BillingService, FEATURED_PRICE_UZS, FEATURED_DAYS } from '../billing/billing.service';
 import { formatSalary } from '../publisher/templates';
-import { MENU_SEARCH_JOB, MENU_SEARCH_RESUME } from './intake.keyboards';
+import { MENU_MY_POSTS, MENU_SEARCH_JOB, MENU_SEARCH_RESUME } from './intake.keyboards';
 
 const PAGE_SIZE = 5;
 
@@ -13,12 +14,75 @@ const PAGE_SIZE = 5;
  */
 @Injectable()
 export class BrowseService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly billing: BillingService,
+  ) {}
 
   register(bot: Bot): void {
     bot.hears(MENU_SEARCH_JOB, (ctx) => this.askRegion(ctx, 'v'));
     bot.hears(MENU_SEARCH_RESUME, (ctx) => this.askRegion(ctx, 'r'));
+    bot.hears(MENU_MY_POSTS, (ctx) => this.myPosts(ctx));
     bot.callbackQuery(/^b:/, (ctx) => this.onCallback(ctx));
+  }
+
+  /** Foydalanuvchining o'z e'lonlari + "Ko'tarish" tugmasi */
+  private async myPosts(ctx: Context): Promise<void> {
+    if (ctx.chat?.type !== 'private' || !ctx.from) return;
+    const user = await this.prisma.appUser.findUnique({
+      where: { tgUserId: BigInt(ctx.from.id) },
+    });
+    if (!user) {
+      await ctx.reply("Sizda hali e'lon yo'q. \"E'lon berish\" orqali qo'shing.");
+      return;
+    }
+    const vacancies = await this.prisma.vacancy.findMany({
+      where: { submittedById: user.id, status: VacancyStatus.ACTIVE, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+    if (vacancies.length === 0) {
+      await ctx.reply("Sizda faol e'lon yo'q. \"E'lon berish\" orqali qo'shing.");
+      return;
+    }
+    await ctx.reply(
+      `💎 <b>E'lonlaringiz</b>\n\nKo'tarilgan e'lon ${FEATURED_DAYS} kun davomida ` +
+        `ro'yxat va guruh tepasida turadi (${FEATURED_PRICE_UZS.toLocaleString('ru-RU')} so'm).`,
+      { parse_mode: 'HTML' },
+    );
+    for (const v of vacancies) {
+      const kb = new InlineKeyboard();
+      if (v.featured) {
+        kb.text('⭐ Ko`tarilgan', 'b:noop');
+      } else {
+        kb.text("💎 Ko'tarish", `b:promo:${v.id}`);
+      }
+      await ctx.reply(`💼 ${this.esc(v.title)}`, { parse_mode: 'HTML', reply_markup: kb });
+    }
+  }
+
+  private async promote(ctx: Context, vacancyId: string): Promise<void> {
+    if (!ctx.from) return;
+    const user = await this.prisma.appUser.findUnique({
+      where: { tgUserId: BigInt(ctx.from.id) },
+    });
+    const checkout = await this.billing.featureVacancyCheckout(
+      user?.id ?? null,
+      vacancyId,
+      PaymentProvider.MANUAL,
+    );
+    const lines = [
+      `💎 <b>E'lonni ko'tarish</b>`,
+      `Narx: ${FEATURED_PRICE_UZS.toLocaleString('ru-RU')} so'm / ${FEATURED_DAYS} kun`,
+      '',
+    ];
+    if (checkout.checkoutUrl) {
+      lines.push(`To'lov uchun: ${checkout.checkoutUrl}`);
+    } else {
+      lines.push(checkout.instructions ?? '');
+      lines.push('', "To'lov tasdiqlangach e'loningiz avtomatik ko'tariladi.");
+    }
+    await ctx.reply(lines.join('\n'), { parse_mode: 'HTML' });
   }
 
   private async askRegion(ctx: Context, kind: 'v' | 'r'): Promise<void> {
@@ -44,6 +108,12 @@ export class BrowseService {
     if (!data) return;
     await ctx.answerCallbackQuery().catch(() => undefined);
     const parts = data.split(':'); // b:cat:v:<reg> | b:list:v:<reg>:<cat>:<page>
+
+    if (parts[1] === 'noop') return;
+    if (parts[1] === 'promo') {
+      await this.promote(ctx, parts[2]);
+      return;
+    }
 
     if (parts[1] === 'cat') {
       const [, , kind, regCode] = parts;

@@ -67,6 +67,8 @@ export interface ResumeDetail extends ResumeListItem {
   experience: string | null;
   phones: string[];
   tgContact: string | null;
+  contactLocked?: boolean;
+  lockMessage?: string;
 }
 
 export interface Page<T> {

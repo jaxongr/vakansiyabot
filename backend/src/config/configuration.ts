@@ -26,6 +26,13 @@ const envSchema = z.object({
   DASHBOARD_URL: z.string().default('http://localhost:5174'),
 
   SENTRY_DSN: z.string().optional(),
+
+  // To'lov provayderlari (O'zbekiston)
+  PAYME_MERCHANT_ID: z.string().optional(),
+  PAYME_MERCHANT_KEY: z.string().optional(), // webhook Basic auth uchun
+  CLICK_MERCHANT_ID: z.string().optional(),
+  CLICK_SERVICE_ID: z.string().optional(),
+  CLICK_SECRET_KEY: z.string().optional(), // webhook imzo uchun
 });
 
 export type Env = z.infer<typeof envSchema>;

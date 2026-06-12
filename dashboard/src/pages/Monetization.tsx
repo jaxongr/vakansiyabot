@@ -59,6 +59,34 @@ export function Monetization() {
       </Row>
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col xs={8} md={4}>
+          <Card>
+            <Statistic title="Konversiya" value={r?.conversionRate ?? 0} suffix="%" valueStyle={{ color: '#6B46C1' }} />
+          </Card>
+        </Col>
+        <Col xs={8} md={5}>
+          <Card>
+            <Statistic title="ARPU" value={r ? fmt(r.arpu) : 0} suffix="so'm" />
+          </Card>
+        </Col>
+        <Col xs={8} md={5}>
+          <Card>
+            <Statistic title="To'lovchilar" value={r?.payingUsers ?? 0} suffix={`/ ${r?.totalUsers ?? 0}`} />
+          </Card>
+        </Col>
+        <Col xs={12} md={5}>
+          <Card>
+            <Statistic title="Faol featured" value={r?.featuredActive ?? 0} valueStyle={{ color: '#F59E0B' }} />
+          </Card>
+        </Col>
+        <Col xs={12} md={5}>
+          <Card>
+            <Statistic title="Faol obunalar" value={r?.activeSubscriptions ?? 0} valueStyle={{ color: '#16A34A' }} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} md={14}>
           <Card title="Kunlik daromad (30 kun)">
             {r && r.daily.length > 0 ? (
