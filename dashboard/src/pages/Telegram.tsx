@@ -31,8 +31,9 @@ export function Telegram() {
         publishGroupId: settings.data.publishGroupId,
         adminIds: settings.data.adminIds,
       });
+      if (settings.data.apiId) loginForm.setFieldsValue({ apiId: settings.data.apiId });
     }
-  }, [settings.data, botForm]);
+  }, [settings.data, botForm, loginForm]);
 
   const s = settings.data;
   const connected = s?.collectorEnabled && s?.sessionSet;
@@ -40,7 +41,10 @@ export function Telegram() {
   const doStartLogin = async () => {
     const v = await loginForm.validateFields();
     try {
-      const res = await startLogin.mutateAsync({ apiId: Number(v.apiId), apiHash: v.apiHash, phone: v.phone });
+      const payload: { apiId?: number; apiHash?: string; phone: string } = { phone: v.phone };
+      if (v.apiId) payload.apiId = Number(v.apiId);
+      if (v.apiHash) payload.apiHash = v.apiHash;
+      const res = await startLogin.mutateAsync(payload);
       setLoginId(res.loginId);
       setStep(1);
       message.success('Kod yuborildi — Telegramingizni tekshiring');
@@ -119,10 +123,15 @@ export function Telegram() {
               {step === 0 && (
                 <Form form={loginForm} layout="vertical">
                   <Form.Item name="apiId" label="api_id" rules={[{ required: true }]}>
-                    <Input placeholder="1234567" />
+                    <Input placeholder="1234567" disabled={Boolean(s?.apiId)} />
                   </Form.Item>
-                  <Form.Item name="apiHash" label="api_hash" rules={[{ required: true }]}>
-                    <Input placeholder="abcdef0123456789..." />
+                  <Form.Item
+                    name="apiHash"
+                    label="api_hash"
+                    extra={s?.apiHashSet ? "✓ Sozlangan — bo'sh qoldiring" : undefined}
+                    rules={[{ required: !s?.apiHashSet }]}
+                  >
+                    <Input placeholder={s?.apiHashSet ? '•••• saqlangan ••••' : 'abcdef0123...'} />
                   </Form.Item>
                   <Form.Item name="phone" label="Telefon raqam" rules={[{ required: true }]}>
                     <Input placeholder="+998901234567" />

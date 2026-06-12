@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { Api, TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
@@ -28,12 +29,29 @@ export class TelegramConnectService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly collector: CollectorService,
+    private readonly config: ConfigService,
   ) {}
 
   async getSettings(): Promise<TelegramSetting> {
     const existing = await this.prisma.telegramSetting.findFirst();
-    if (existing) return existing;
-    return this.prisma.telegramSetting.create({ data: {} });
+    // .env dagi api_id/api_hash bilan bir marta to'ldiramiz (dashboard prefill)
+    const envApiId = this.config.get<number>('TG_API_ID');
+    const envApiHash = this.config.get<string>('TG_API_HASH');
+    if (existing) {
+      if ((!existing.apiId && envApiId) || (!existing.apiHash && envApiHash)) {
+        return this.prisma.telegramSetting.update({
+          where: { id: existing.id },
+          data: {
+            apiId: existing.apiId ?? envApiId ?? null,
+            apiHash: existing.apiHash ?? envApiHash ?? null,
+          },
+        });
+      }
+      return existing;
+    }
+    return this.prisma.telegramSetting.create({
+      data: { apiId: envApiId ?? null, apiHash: envApiHash ?? null },
+    });
   }
 
   /** Bot sozlamalari (token/guruh/adminlar) — restartda qo'llanadi */
@@ -49,9 +67,23 @@ export class TelegramConnectService {
 
   // ===================== Collector login oqimi =====================
 
-  /** 1-qadam: telefon raqamga kod yuborish */
-  async startLogin(apiId: number, apiHash: string, phone: string): Promise<{ loginId: string }> {
+  /** 1-qadam: telefon raqamga kod yuborish (api_id/hash berilmasa sozlamadan olinadi) */
+  async startLogin(
+    apiIdIn: number | undefined,
+    apiHashIn: string | undefined,
+    phone: string,
+  ): Promise<{ loginId: string }> {
     this.cleanupExpired();
+    const settings = await this.getSettings();
+    const apiId = apiIdIn ?? settings.apiId ?? this.config.get<number>('TG_API_ID');
+    const apiHash = apiHashIn ?? settings.apiHash ?? this.config.get<string>('TG_API_HASH');
+    if (!apiId || !apiHash) {
+      throw new AppException(
+        ErrorCode.COLLECTOR_SESSION_INVALID,
+        'api_id / api_hash sozlanmagan',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
     const client = new TelegramClient(new StringSession(''), apiId, apiHash, {
       connectionRetries: 3,
     });

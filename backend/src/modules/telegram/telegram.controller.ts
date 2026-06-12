@@ -7,8 +7,8 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { TelegramConnectService } from './telegram-connect.service';
 
 class StartLoginDto {
-  @ApiProperty() @Type(() => Number) @IsInt() apiId!: number;
-  @ApiProperty() @IsString() @MinLength(10) apiHash!: string;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() apiId?: number;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MinLength(10) apiHash?: string;
   @ApiProperty({ example: '+998901234567' }) @IsString() @MinLength(9) phone!: string;
 }
 

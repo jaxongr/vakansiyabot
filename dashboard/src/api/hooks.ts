@@ -174,7 +174,7 @@ export function useTelegram() {
   return {
     settings,
     startLogin: useMutation({
-      mutationFn: async (body: { apiId: number; apiHash: string; phone: string }) =>
+      mutationFn: async (body: { apiId?: number; apiHash?: string; phone: string }) =>
         (await api.post('/telegram/collector/start-login', body)).data.data,
     }),
     confirmCode: useMutation({

@@ -6,6 +6,7 @@ describe('SystemController', () => {
   let controller: SystemController;
   const prisma = { $queryRaw: jest.fn() };
   const redis = { ping: jest.fn() };
+  const q = { getJobCounts: jest.fn().mockResolvedValue({ waiting: 0, active: 0, failed: 0 }) };
   let status: SystemStatusService;
 
   beforeEach(() => {
@@ -15,6 +16,10 @@ describe('SystemController', () => {
       prisma as unknown as PrismaService,
       redis as never,
       status,
+      q as never,
+      q as never,
+      q as never,
+      q as never,
     );
   });
 

@@ -1,10 +1,21 @@
 import { Badge, Card, Col, Descriptions, Empty, Row, Spin } from 'antd';
 import { useHealth } from '../api/hooks';
 
+interface QueueCount {
+  waiting?: number;
+  active?: number;
+  failed?: number;
+}
 interface Health {
   status: string;
   db: { status: string };
   redis: { status: string };
+  queues?: {
+    analyze?: QueueCount;
+    dedup?: QueueCount;
+    publish?: QueueCount;
+    deadLetter?: number;
+  };
   components: Record<string, { status: string; message?: string; updatedAt: string }>;
 }
 
@@ -38,6 +49,27 @@ export function System() {
           </p>
         </Card>
       </Col>
+      {h.queues && (
+        <Col xs={24}>
+          <Card title="Navbatlar (BullMQ)">
+            <Descriptions column={{ xs: 1, sm: 2, md: 4 }} bordered size="small">
+              <Descriptions.Item label="Analyze">
+                ⏳ {h.queues.analyze?.waiting ?? 0} / ▶ {h.queues.analyze?.active ?? 0} / ❌{' '}
+                {h.queues.analyze?.failed ?? 0}
+              </Descriptions.Item>
+              <Descriptions.Item label="Dedup">
+                ⏳ {h.queues.dedup?.waiting ?? 0} / ▶ {h.queues.dedup?.active ?? 0} / ❌{' '}
+                {h.queues.dedup?.failed ?? 0}
+              </Descriptions.Item>
+              <Descriptions.Item label="Publish">
+                ⏳ {h.queues.publish?.waiting ?? 0} / ▶ {h.queues.publish?.active ?? 0} / ❌{' '}
+                {h.queues.publish?.failed ?? 0}
+              </Descriptions.Item>
+              <Descriptions.Item label="Dead-letter">{h.queues.deadLetter ?? 0}</Descriptions.Item>
+            </Descriptions>
+          </Card>
+        </Col>
+      )}
       <Col xs={24} md={16}>
         <Card title="Komponentlar">
           {Object.keys(h.components).length === 0 ? (
