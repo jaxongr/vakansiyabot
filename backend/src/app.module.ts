@@ -29,6 +29,8 @@ import { ScraperModule } from './modules/scraper/scraper.module';
 import { SmsModule } from './modules/sms/sms.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { ApplicationsModule } from './modules/applications/applications.module';
+import { AlertsModule } from './modules/alerts/alerts.module';
 
 @Module({
   imports: [
@@ -71,6 +73,8 @@ import { BillingModule } from './modules/billing/billing.module';
     SmsModule,
     TelegramModule,
     BillingModule,
+    ApplicationsModule,
+    AlertsModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },

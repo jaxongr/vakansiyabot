@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { useSaved, useToggleSave, useVacancy } from '../api/hooks';
+import { useApply, useSaved, useToggleSave, useVacancy } from '../api/hooks';
 import { Button, Card, EMPLOYMENT_LABEL, Pill, Screen, Spinner, Center, formatSalary } from '../components/ui';
 import { getWebApp } from '../telegram';
 import { css } from '../theme';
@@ -53,7 +53,9 @@ export function VacancyPage() {
   const { data: v, isLoading, isError } = useVacancy(id);
   const { data: saved } = useSaved();
   const toggleSave = useToggleSave();
+  const apply = useApply();
   const [isSaved, setIsSaved] = useState(false);
+  const [applied, setApplied] = useState(false);
 
   useEffect(() => {
     const wa = getWebApp();
@@ -136,11 +138,28 @@ export function VacancyPage() {
       </Card>
 
       <Actions>
-        <Button onClick={openContact}>
-          {v.tgContact ? '✈️ Bog\'lanish' : v.phones[0] ? '📞 Qo\'ng\'iroq' : 'Aloqa yo\'q'}
+        <Button
+          onClick={async () => {
+            if (applied) return;
+            try {
+              await apply.mutateAsync({ vacancyId: v.id });
+              setApplied(true);
+            } catch (e) {
+              const msg = (e as { response?: { data?: { error?: { message?: string } } } }).response
+                ?.data?.error?.message;
+              if (msg?.includes('allaqachon')) setApplied(true);
+              else alert(msg ?? 'Xatolik');
+            }
+          }}
+          disabled={apply.isPending || applied}
+        >
+          {applied ? '✅ Ariza topshirildi' : '📩 Ariza topshirish'}
+        </Button>
+        <Button $variant="ghost" onClick={openContact}>
+          {v.tgContact ? '✈️' : v.phones[0] ? '📞' : '—'}
         </Button>
         <Button $variant="ghost" onClick={handleSave} disabled={toggleSave.isPending}>
-          {isSaved ? '⭐ Saqlangan' : '☆ Saqlash'}
+          {isSaved ? '⭐' : '☆'}
         </Button>
       </Actions>
     </Screen>

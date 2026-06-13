@@ -7,6 +7,8 @@ import { CacheService } from '../../redis/cache.service';
 import { NormalizeService } from './normalize.service';
 import { MatcherService } from './matcher.service';
 import {
+  ALERT_QUEUE,
+  AlertJobData,
   DEAD_LETTER_QUEUE,
   DEDUP_QUEUE,
   DedupJobData,
@@ -33,6 +35,7 @@ export class DedupProcessor extends WorkerHost {
     private readonly normalize: NormalizeService,
     private readonly matcher: MatcherService,
     @InjectQueue(PUBLISH_QUEUE) private readonly publishQueue: Queue<PublishJobData>,
+    @InjectQueue(ALERT_QUEUE) private readonly alertQueue: Queue<AlertJobData>,
     @InjectQueue(DEAD_LETTER_QUEUE) private readonly dlq: Queue,
   ) {
     super();
@@ -115,6 +118,8 @@ export class DedupProcessor extends WorkerHost {
     await this.cache.del('stats:overview');
 
     await this.publishQueue.add('publish', { vacancyId: vacancy.id, action: 'create' });
+    // Job Alert: mos saqlangan qidiruvlar egalariga xabar
+    await this.alertQueue.add('alert', { vacancyId: vacancy.id });
   }
 
   private async findCandidates(regionId: string, phones: string[]) {

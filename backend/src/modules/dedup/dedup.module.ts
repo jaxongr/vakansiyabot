@@ -6,6 +6,7 @@ import { DedupProcessor } from './dedup.processor';
 import { DedupReviewController } from './dedup-review.controller';
 import { DedupReviewService } from './dedup-review.service';
 import {
+  ALERT_QUEUE,
   DEAD_LETTER_QUEUE,
   DEDUP_QUEUE,
   DEFAULT_JOB_OPTIONS,
@@ -17,6 +18,7 @@ import {
     BullModule.registerQueue(
       { name: DEDUP_QUEUE, defaultJobOptions: DEFAULT_JOB_OPTIONS },
       { name: PUBLISH_QUEUE, defaultJobOptions: DEFAULT_JOB_OPTIONS },
+      { name: ALERT_QUEUE, defaultJobOptions: DEFAULT_JOB_OPTIONS },
       { name: DEAD_LETTER_QUEUE },
     ),
   ],

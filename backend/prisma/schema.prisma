@@ -77,6 +77,15 @@ enum WebSourceStatus {
   ERROR
 }
 
+/// Ariza holati (ish izlovchi -> ish beruvchi)
+enum ApplicationStatus {
+  NEW
+  VIEWED
+  SHORTLISTED
+  REJECTED
+  HIRED
+}
+
 enum SmsProvider {
   ESKIZ
   PLAYMOBILE
@@ -217,6 +226,7 @@ model Vacancy {
   sources       VacancySource[]
   publishedPost PublishedPost?
   savedBy       SavedVacancy[]
+  applications  Application[]
   reviewsA      DedupReview[]   @relation("ReviewVacancyA")
   reviewsB      DedupReview[]   @relation("ReviewVacancyB")
 
@@ -306,6 +316,7 @@ model Resume {
   category        Category         @relation(fields: [categoryId], references: [id])
   submittedBy     AppUser?         @relation("SubmittedResumes", fields: [submittedById], references: [id])
   publishedResume PublishedResume?
+  applications    Application[]
 
   @@index([regionId, status, createdAt])
   @@index([categoryId, status])
@@ -331,8 +342,54 @@ model AppUser {
   submittedResumes    Resume[]       @relation("SubmittedResumes")
   subscriptions       Subscription[]
   payments            Payment[]
+  applications        Application[]
+  savedSearches       SavedSearch[]
 
   @@map("app_users")
+}
+
+/// Ariza — ish izlovchi vakansiyaga topshiradi, ish beruvchi ko'radi/boshqaradi
+model Application {
+  id          String            @id @default(uuid())
+  vacancyId   String
+  applicantId String // AppUser (ish izlovchi)
+  resumeId    String? // biriktirilgan rezyume (ixtiyoriy)
+  phone       String? // aloqa (rezyume yo'q bo'lsa)
+  coverNote   String? // qisqa xat
+  status      ApplicationStatus @default(NEW)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  vacancy   Vacancy @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
+  applicant AppUser @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  resume    Resume? @relation(fields: [resumeId], references: [id])
+
+  @@unique([vacancyId, applicantId]) // bir kishi bir vakansiyaga bir marta
+  @@index([vacancyId, status])
+  @@index([applicantId])
+  @@map("applications")
+}
+
+/// Saqlangan qidiruv — mos yangi vakansiya chiqsa egasiga xabar (Job Alert)
+model SavedSearch {
+  id             String          @id @default(uuid())
+  userId         String
+  title          String? // foydalanuvchi bergan nom
+  regionId       String?
+  categoryId     String?
+  salaryMin      Int?
+  employmentType EmploymentType?
+  q              String?
+  notify         Boolean         @default(true)
+  lastNotifiedAt DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([notify])
+  @@map("saved_searches")
 }
 
 /// Avto-kashfiyot: yig'ilgan postlardan topilgan kanal nomzodlari

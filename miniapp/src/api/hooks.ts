@@ -108,6 +108,45 @@ export function useSaved() {
   });
 }
 
+export function useApply() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { vacancyId: string; coverNote?: string }) =>
+      (await api.post('/applications', body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['my-applications'] }),
+  });
+}
+
+export function useMyApplications() {
+  return useQuery({
+    queryKey: ['my-applications'],
+    queryFn: async () => (await api.get<{ data: unknown[] }>('/me/applications')).data.data,
+  });
+}
+
+export function useSaveSearch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: Record<string, unknown>) => (await api.post('/me/searches', body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['my-searches'] }),
+  });
+}
+
+export function useMySearches() {
+  return useQuery({
+    queryKey: ['my-searches'],
+    queryFn: async () => (await api.get<{ data: unknown[] }>('/me/searches')).data.data,
+  });
+}
+
+export function useDeleteSearch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => (await api.delete(`/me/searches/${id}`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['my-searches'] }),
+  });
+}
+
 export function useToggleSave() {
   const qc = useQueryClient();
   return useMutation({

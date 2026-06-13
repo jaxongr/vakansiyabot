@@ -14,16 +14,110 @@ const PAGE_SIZE = 5;
  */
 @Injectable()
 export class BrowseService {
+  private bot: Bot | null = null;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly billing: BillingService,
   ) {}
 
   register(bot: Bot): void {
+    this.bot = bot;
     bot.hears(MENU_SEARCH_JOB, (ctx) => this.askRegion(ctx, 'v'));
     bot.hears(MENU_SEARCH_RESUME, (ctx) => this.askRegion(ctx, 'r'));
     bot.hears(MENU_MY_POSTS, (ctx) => this.myPosts(ctx));
     bot.callbackQuery(/^b:/, (ctx) => this.onCallback(ctx));
+  }
+
+  /** Ish izlovchi vakansiyaga ariza topshiradi (bot ichidan) */
+  private async apply(ctx: Context, vacancyId: string): Promise<void> {
+    if (!ctx.from) return;
+    const user = await this.prisma.appUser.upsert({
+      where: { tgUserId: BigInt(ctx.from.id) },
+      update: { username: ctx.from.username, firstName: ctx.from.first_name },
+      create: {
+        tgUserId: BigInt(ctx.from.id),
+        username: ctx.from.username,
+        firstName: ctx.from.first_name,
+      },
+    });
+    const vacancy = await this.prisma.vacancy.findFirst({
+      where: { id: vacancyId, deletedAt: null, status: VacancyStatus.ACTIVE },
+      include: { submittedBy: true },
+    });
+    if (!vacancy) {
+      await ctx.reply("Vakansiya topilmadi yoki yopilgan.");
+      return;
+    }
+    // foydalanuvchining oxirgi rezyumesini biriktiramiz (bo'lsa)
+    const resume = await this.prisma.resume.findFirst({
+      where: { submittedById: user.id, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+    });
+    try {
+      await this.prisma.application.create({
+        data: {
+          vacancyId,
+          applicantId: user.id,
+          resumeId: resume?.id,
+          phone: resume?.phones[0] ?? (ctx.from.username ? null : null),
+        },
+      });
+    } catch (e) {
+      if ((e as { code?: string }).code === 'P2002') {
+        await ctx.reply("✅ Siz bu vakansiyaga allaqachon ariza topshirgansiz.");
+        return;
+      }
+      throw e;
+    }
+    // ish beruvchiga xabar
+    if (vacancy.submittedBy?.tgUserId && this.bot) {
+      const cnt = await this.prisma.application.count({ where: { vacancyId } });
+      await this.bot.api
+        .sendMessage(
+          Number(vacancy.submittedBy.tgUserId),
+          `📩 "<b>${this.esc(vacancy.title)}</b>" e'loningizga yangi ariza! Jami: ${cnt}.\n"💎 E'lonlarim" orqali ko'ring.`,
+          { parse_mode: 'HTML' },
+        )
+        .catch(() => undefined);
+    }
+    await ctx.reply(
+      resume
+        ? "✅ Ariza topshirildi! Rezyumeingiz ish beruvchiga yuborildi."
+        : "✅ Ariza topshirildi! (Rezyume yuborsangiz, ish beruvchi ko'proq ma'lumot ko'radi — \"📄 Rezyume yuborish\")",
+    );
+  }
+
+  /** Ish beruvchi: vakansiyaga kelgan arizalarni ko'radi */
+  private async viewApplicants(ctx: Context, vacancyId: string): Promise<void> {
+    if (!ctx.from) return;
+    const user = await this.prisma.appUser.findUnique({
+      where: { tgUserId: BigInt(ctx.from.id) },
+    });
+    const vacancy = await this.prisma.vacancy.findFirst({ where: { id: vacancyId } });
+    if (!vacancy || !user || vacancy.submittedById !== user.id) {
+      await ctx.reply("Bu e'lon sizniki emas.");
+      return;
+    }
+    const apps = await this.prisma.application.findMany({
+      where: { vacancyId },
+      include: { applicant: true, resume: true },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+    if (apps.length === 0) {
+      await ctx.reply("Hozircha ariza yo'q.");
+      return;
+    }
+    const lines = [`📩 <b>${this.esc(vacancy.title)}</b> — ${apps.length} ariza`, ''];
+    for (const a of apps) {
+      const name = a.resume?.fullName ?? a.applicant.firstName ?? 'Nomalum';
+      const contact =
+        a.resume?.phones[0] ? `+${a.resume.phones[0]}` : a.applicant.username ? `@${a.applicant.username}` : '—';
+      const exp = a.resume?.experienceYears ? `, ${a.resume.experienceYears} yil tajriba` : '';
+      lines.push(`👤 ${this.esc(name)}${exp}\n   📞 ${contact}`);
+    }
+    await ctx.reply(lines.join('\n'), { parse_mode: 'HTML' });
   }
 
   /** Foydalanuvchining o'z e'lonlari + "Ko'tarish" tugmasi */
@@ -51,7 +145,9 @@ export class BrowseService {
       { parse_mode: 'HTML' },
     );
     for (const v of vacancies) {
+      const appCount = await this.prisma.application.count({ where: { vacancyId: v.id } });
       const kb = new InlineKeyboard();
+      kb.text(`📩 Arizalar (${appCount})`, `b:apps:${v.id}`);
       if (v.featured) {
         kb.text('⭐ Ko`tarilgan', 'b:noop');
       } else {
@@ -112,6 +208,14 @@ export class BrowseService {
     if (parts[1] === 'noop') return;
     if (parts[1] === 'promo') {
       await this.promote(ctx, parts[2]);
+      return;
+    }
+    if (parts[1] === 'apply') {
+      await this.apply(ctx, parts[2]);
+      return;
+    }
+    if (parts[1] === 'apps') {
+      await this.viewApplicants(ctx, parts[2]);
       return;
     }
 
@@ -187,18 +291,28 @@ export class BrowseService {
       `Topildi: ${total} ta | Sahifa ${page + 1}/${Math.ceil(total / PAGE_SIZE)}`,
       '',
     ];
-    for (const item of items) {
-      lines.push(this.renderItem(kind, item));
-    }
+    items.forEach((item, i) => {
+      lines.push(`<b>${i + 1}.</b> ${this.renderItem(kind, item)}`);
+    });
 
     const totalPages = Math.ceil(total / PAGE_SIZE);
-    const nav = new InlineKeyboard();
-    if (page > 0) nav.text('⬅️ Oldingi', `b:list:${kind}:${regCode}:${catCode}:${page - 1}`);
+    const kb = new InlineKeyboard();
+
+    // vakansiyalar uchun har biriga raqamlangan "Ariza" tugmasi
+    if (kind === 'v') {
+      lines.push("📩 Ariza topshirish uchun raqamni bosing:");
+      items.forEach((item, i) => {
+        kb.text(`📩 ${i + 1}`, `b:apply:${(item as { id: string }).id}`);
+      });
+      kb.row();
+    }
+
+    if (page > 0) kb.text('⬅️ Oldingi', `b:list:${kind}:${regCode}:${catCode}:${page - 1}`);
     if (page < totalPages - 1)
-      nav.text('Keyingi ➡️', `b:list:${kind}:${regCode}:${catCode}:${page + 1}`);
+      kb.text('Keyingi ➡️', `b:list:${kind}:${regCode}:${catCode}:${page + 1}`);
 
     await ctx
-      .editMessageText(lines.join('\n'), { parse_mode: 'HTML', reply_markup: nav })
+      .editMessageText(lines.join('\n'), { parse_mode: 'HTML', reply_markup: kb })
       .catch(() => undefined);
   }
 

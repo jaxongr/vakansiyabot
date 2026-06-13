@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { useCategories, useRegions, useResumes, useVacancies, VacancyFilters } from '../api/hooks';
+import {
+  useCategories,
+  useRegions,
+  useResumes,
+  useSaveSearch,
+  useVacancies,
+  VacancyFilters,
+} from '../api/hooks';
 import { VacancyCard } from '../components/VacancyCard';
 import { ResumeCard } from '../components/ResumeCard';
 import { Button, Center, Screen, Spinner } from '../components/ui';
@@ -68,6 +75,19 @@ const Tab = styled.button<{ $active: boolean }>`
   background: ${(p) => (p.$active ? css.button : css.secondaryBg)};
   color: ${(p) => (p.$active ? css.buttonText : css.text)};
 `;
+const SaveSearchBtn = styled.button`
+  flex-shrink: 0;
+  border: 1px solid ${css.button};
+  background: ${css.bg};
+  color: ${css.button};
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+`;
 const SavedLink = styled.button`
   position: fixed;
   bottom: 18px;
@@ -112,6 +132,7 @@ export function Home() {
     [debouncedQ, regionId, categoryId, employmentType],
   );
 
+  const saveSearch = useSaveSearch();
   const vacanciesQuery = useVacancies(filters);
   const resumesQuery = useResumes(filters);
   const active = tab === 'vacancies' ? vacanciesQuery : resumesQuery;
@@ -172,6 +193,25 @@ export function Home() {
             <option value="REMOTE">Masofaviy</option>
             <option value="SHIFT">Smenali</option>
           </Select>
+          {tab === 'vacancies' && (regionId || categoryId || employmentType || debouncedQ) && (
+            <SaveSearchBtn
+              onClick={async () => {
+                try {
+                  await saveSearch.mutateAsync({
+                    regionId: regionId || undefined,
+                    categoryId: categoryId || undefined,
+                    employmentType: employmentType || undefined,
+                    q: debouncedQ || undefined,
+                  });
+                  alert("🔔 Qidiruv saqlandi! Mos vakansiya chiqsa botda xabar olasiz.");
+                } catch {
+                  alert('Saqlashda xatolik');
+                }
+              }}
+            >
+              🔔 Saqlash
+            </SaveSearchBtn>
+          )}
         </Filters>
       </Top>
 

@@ -3,7 +3,12 @@
 export const ANALYZE_QUEUE = 'analyze';
 export const DEDUP_QUEUE = 'dedup';
 export const PUBLISH_QUEUE = 'publish';
+export const ALERT_QUEUE = 'alert';
 export const DEAD_LETTER_QUEUE = 'dead-letter';
+
+export interface AlertJobData {
+  vacancyId: string;
+}
 
 /** Barcha queue'lar uchun standart: 3 urinish, eksponensial backoff */
 export const DEFAULT_JOB_OPTIONS = {

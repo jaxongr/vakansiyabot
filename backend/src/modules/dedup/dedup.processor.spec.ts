@@ -7,6 +7,7 @@ import { MatcherService } from './matcher.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CacheService } from '../../redis/cache.service';
 import {
+  ALERT_QUEUE,
   DEAD_LETTER_QUEUE,
   DedupJobData,
   ExtractedVacancy,
@@ -27,6 +28,7 @@ describe('DedupProcessor', () => {
     category: { findMany: jest.fn() },
   };
   const publishQueue = { add: jest.fn() };
+  const alertQueue = { add: jest.fn() };
   const dlq = { add: jest.fn() };
 
   const baseExtracted: ExtractedVacancy = {
@@ -54,6 +56,7 @@ describe('DedupProcessor', () => {
           useValue: { del: jest.fn(), delPattern: jest.fn(), get: jest.fn(), set: jest.fn() },
         },
         { provide: getQueueToken(PUBLISH_QUEUE), useValue: publishQueue },
+        { provide: getQueueToken(ALERT_QUEUE), useValue: alertQueue },
         { provide: getQueueToken(DEAD_LETTER_QUEUE), useValue: dlq },
       ],
     }).compile();
